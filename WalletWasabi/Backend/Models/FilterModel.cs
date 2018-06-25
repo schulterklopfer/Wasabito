@@ -10,7 +10,7 @@ namespace WalletWasabi.Backend.Models
 	{
 		public Height BlockHeight { get; set; }
 		public uint256 BlockHash { get; set; }
-		public GolombRiceFilter Filter { get; set; }
+		public WalletWasabi.Bip158.GolombRiceFilter Filter { get; set; }
 
 		// https://github.com/bitcoin/bips/blob/master/bip-0158.mediawiki
 		// The parameter k MUST be set to the first 16 bytes of the hash of the block for which the filter
@@ -46,7 +46,7 @@ namespace WalletWasabi.Backend.Models
 			}
 
 			var data = NBitcoin.DataEncoders.Encoders.Hex.DecodeData(parts[1]);
-			var filter = new GolombRiceFilter(data, 20, 1<<20);
+			var filter = new WalletWasabi.Bip158.GolombRiceFilter(data, 20, 1<<20);
 			
 			return new FilterModel
 			{

@@ -313,10 +313,10 @@ namespace WalletWasabi.Services
 								}
 							}
 
-							GolombRiceFilter filter = null;
+							WalletWasabi.Bip158.GolombRiceFilter filter = null;
 							if (scripts.Count != 0)
 							{
-								filter = new GolombRiceFilterBuilder()
+								filter = new WalletWasabi.Bip158.GolombRiceFilterBuilder()
 									.SetKey(block.GetHash())
 									.SetP(20)
 									.SetM(1<<20)
