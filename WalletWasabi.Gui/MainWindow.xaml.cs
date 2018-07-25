@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using Avalonia;
@@ -22,6 +23,7 @@ namespace WalletWasabi.Gui
 		private void InitializeComponent()
 		{
 			Activated += OnActivated;
+			Closing += OnClosing;
 			AvaloniaXamlLoader.Load(this);
 		}
 
@@ -47,5 +49,20 @@ namespace WalletWasabi.Gui
 				walletManagerViewModel.SelectGenerateWallet();
 			}
 		}
+
+		private void OnClosing(object sender, CancelEventArgs e)
+		{
+			var mustClose = AskCloseAndDequeCoins();
+			e.Cancel = !mustClose;
+			if(mustClose)
+			{
+				Closing -= OnClosing;
+			}
+		}
+
+		private bool AskCloseAndDequeCoins()
+		{
+			return true;
+		} 
 	}
 }
