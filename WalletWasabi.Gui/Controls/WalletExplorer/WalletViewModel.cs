@@ -9,6 +9,7 @@ using NBitcoin;
 using ReactiveUI;
 using WalletWasabi.Gui.ViewModels;
 using WalletWasabi.Models;
+using DynamicData;
 
 namespace WalletWasabi.Gui.Controls.WalletExplorer
 {
@@ -27,11 +28,10 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		public WalletViewModel(string name, bool receiveDominant)
 			: base(name)
 		{
-			var coinsChanged = Observable.FromEventPattern(Global.WalletService.Coins, nameof(Global.WalletService.Coins.HashSetChanged));
+			var coinsChanged = Global.WalletService.Coins.AsObservableCache();
 			var coinSpent = Observable.FromEventPattern(Global.WalletService, nameof(Global.WalletService.CoinSpentOrSpenderConfirmed));
 
-			coinsChanged
-				.Merge(coinSpent)
+			coinsChanged.Connect()
 				.ObserveOn(RxApp.MainThreadScheduler)
 				.Subscribe(o =>
 				{
@@ -77,7 +77,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 		private void SetBalance(string walletName)
 		{
-			Money balance = Global.WalletService.Coins.Where(c => c.Unspent).Sum(c => (long?)c.Amount) ?? 0;
+			Money balance = Global.WalletService.Coins.Items.Where(c => c.Unspent).Sum(c => (long?)c.Amount) ?? 0;
 			Title = $"{walletName} ({balance.ToString(false, true)} BTC)";
 		}
 	}

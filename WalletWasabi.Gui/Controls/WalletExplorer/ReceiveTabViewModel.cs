@@ -32,13 +32,11 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			_addresses = new ObservableCollection<AddressViewModel>();
 			Label = "";
 
-			Observable.FromEventPattern(Global.WalletService.Coins, nameof(Global.WalletService.Coins.HashSetChanged))
-				.ObserveOn(RxApp.MainThreadScheduler)
-				.Subscribe(o =>
-			{
-				InitializeAddresses();
-			});
-
+			Global.WalletService.Coins
+					.Connect() 
+					.ObserveOn(RxApp.MainThreadScheduler)
+					.Subscribe(o=>InitializeAddresses());
+			
 			InitializeAddresses();
 
 			GenerateCommand = ReactiveCommand.Create(() =>

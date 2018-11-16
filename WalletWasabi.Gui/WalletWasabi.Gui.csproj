@@ -65,6 +65,7 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="DynamicData" Version="6.7.0.2529" />
   </ItemGroup>
 
   <ItemGroup>

@@ -16,6 +16,8 @@ using ReactiveUI.Legacy;
 using WalletWasabi.Exceptions;
 using System.Collections.ObjectModel;
 using WalletWasabi.Gui.Tabs.WalletManager;
+using DynamicData;
+using DynamicData.Binding;
 
 namespace WalletWasabi.Gui.Controls.WalletExplorer
 {
@@ -45,15 +47,19 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		{
 			Label = "";
 
-			var onCoinsSetModified = Observable.FromEventPattern(Global.WalletService.Coins, nameof(Global.WalletService.Coins.HashSetChanged))
-				.ObserveOn(RxApp.MainThreadScheduler);
+			ReadOnlyObservableCollection<CoinViewModel> coinList;
 
-			var globalCoins = Global.WalletService.Coins.CreateDerivedCollection(c => new CoinViewModel(c), null, (first, second) => second.Amount.CompareTo(first.Amount), signalReset: onCoinsSetModified, RxApp.MainThreadScheduler);
-			globalCoins.ChangeTrackingEnabled = true;
+			Global.WalletService.Coins.Connect(coin=>coin.SpentOrCoinJoinInProgress || coin.Confirmed || coin.Unspent  ) 
+					.Filter(coin=>!coin.SpentOrCoinJoinInProgress)
+					.Transform(coin => new CoinViewModel(coin))
+					.Sort(SortExpressionComparer<CoinViewModel>.Descending(c => c.Amount))
+					.ObserveOn(RxApp.MainThreadScheduler)
+					.Bind(out coinList) 
+					.Batch(TimeSpan.FromSeconds(0.5))
+					.DisposeMany()
+					.Subscribe();
 
-			var filteredCoins = globalCoins.CreateDerivedCollection(c => c, c => !c.SpentOrCoinJoinInProgress);
-
-			CoinList = new CoinListViewModel(filteredCoins);
+			CoinList = new CoinListViewModel(coinList);
 
 			BuildTransactionButtonText = BuildTransactionButtonTextString;
 

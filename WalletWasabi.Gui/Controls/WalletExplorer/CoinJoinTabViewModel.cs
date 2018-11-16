@@ -7,6 +7,8 @@ using System.Reactive.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using DynamicData;
+using DynamicData.Binding;
 using NBitcoin;
 using ReactiveUI;
 using ReactiveUI.Legacy;
@@ -39,15 +41,29 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		{
 			Password = "";
 
-			var onCoinsSetModified = Observable.FromEventPattern(Global.WalletService.Coins, nameof(Global.WalletService.Coins.HashSetChanged))
-				.ObserveOn(RxApp.MainThreadScheduler);
+			var globalCoins = Global.WalletService.Coins;
 
-			var globalCoins = Global.WalletService.Coins.CreateDerivedCollection(c => new CoinViewModel(c), null, (first, second) => second.Amount.CompareTo(first.Amount), signalReset: onCoinsSetModified, RxApp.MainThreadScheduler);
-			globalCoins.ChangeTrackingEnabled = true;
+			ReadOnlyObservableCollection<CoinViewModel> available, queued;
 
-			var available = globalCoins.CreateDerivedCollection(c => c, c => c.Confirmed && !c.SpentOrCoinJoinInProgress);
+			globalCoins
+				.Connect() 
+				.Filter(coin=> coin.Confirmed && !coin.SpentOrCoinJoinInProgress) 
+				.Transform(coin => new CoinViewModel(coin))
+				.Sort(SortExpressionComparer<CoinViewModel>.Descending(c => c.Amount))
+				.ObserveOn(RxApp.MainThreadScheduler)
+				.Bind(out available) 
+				.DisposeMany()
+				.Subscribe();
 
-			var queued = globalCoins.CreateDerivedCollection(c => c, c => c.CoinJoinInProgress);
+			globalCoins
+				.Connect() 
+				.Filter(coin=> coin.CoinJoinInProgress) 
+				.Transform(coin => new CoinViewModel(coin))
+				.Sort(SortExpressionComparer<CoinViewModel>.Descending(c => c.Amount))
+				.ObserveOn(RxApp.MainThreadScheduler)
+				.Bind(out queued) 
+				.DisposeMany()
+				.Subscribe();
 
 			var registrableRound = Global.ChaumianClient.State.GetRegistrableRoundOrDefault();
 
@@ -216,10 +232,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			}
 		}
 
-#pragma warning disable CS0618 // Type or member is obsolete
-
-		private void UpdateRequiredBtcLabel(CcjClientRound registrableRound, IReactiveDerivedList<CoinViewModel> available, IReactiveDerivedList<CoinViewModel> queued)
-#pragma warning restore CS0618 // Type or member is obsolete
+		private void UpdateRequiredBtcLabel(CcjClientRound registrableRound, IEnumerable<CoinViewModel> available, IEnumerable<CoinViewModel> queued)
 		{
 			if (registrableRound == default)
 			{

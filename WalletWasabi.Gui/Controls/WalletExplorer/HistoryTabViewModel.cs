@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Threading;
 using AvalonStudio.Extensibility;
+using DynamicData;
 using NBitcoin;
 using ReactiveUI;
 using System;
@@ -33,18 +34,15 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			Transactions = new ObservableCollection<TransactionViewModel>();
 			RewriteTable();
 
-			var coinsChanged = Observable.FromEventPattern(Global.WalletService.Coins, nameof(Global.WalletService.Coins.HashSetChanged));
+			//var coinsChanged = Observable.FromEventPattern(Global.WalletService.Coins, nameof(Global.WalletService.Coins.HashSetChanged));
+			var coinSpent         = Observable.FromEventPattern(Global.WalletService, nameof(Global.WalletService.CoinSpentOrSpenderConfirmed));
+			var coinsChanged      = Global.WalletService.Coins.AsObservableCache();
 			var newBlockProcessed = Observable.FromEventPattern(Global.WalletService, nameof(Global.WalletService.NewBlockProcessed));
-			var coinSpent = Observable.FromEventPattern(Global.WalletService, nameof(Global.WalletService.CoinSpentOrSpenderConfirmed));
 
-			coinsChanged
-				.Merge(newBlockProcessed)
-				.Merge(coinSpent)
+			coinsChanged.Connect()
 				.ObserveOn(RxApp.MainThreadScheduler)
-				.Subscribe(o =>
-				{
-					RewriteTable();
-				});
+				.Subscribe(o=>RewriteTable());
+
 
 			this.WhenAnyValue(x => x.SelectedTransaction).Subscribe(async transaction =>
 			{
@@ -73,7 +71,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		private void RewriteTable()
 		{
 			var txRecordList = new List<(DateTimeOffset dateTime, Height height, Money amount, string label, uint256 transactionId)>();
-			foreach (SmartCoin coin in Global.WalletService.Coins)
+			foreach (SmartCoin coin in Global.WalletService.Coins.Items)
 			{
 				var found = txRecordList.FirstOrDefault(x => x.transactionId == coin.TransactionId);
 				SmartTransaction foundTransaction = Global.WalletService.TransactionCache.First(x => x.GetHash() == coin.TransactionId);
