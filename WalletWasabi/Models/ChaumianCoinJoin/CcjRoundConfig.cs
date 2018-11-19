@@ -28,7 +28,7 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 		public decimal? CoordinatorFeePercent { get; internal set; }
 
 		[JsonProperty(PropertyName = "AnonymitySet")]
-		public int? AnonymitySet { get; internal set; }
+		public int? AnonymitySet { get; set; }
 
 		[JsonProperty(PropertyName = "InputRegistrationTimeout")]
 		public long? InputRegistrationTimeout { get; internal set; }
@@ -48,6 +48,9 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 		[JsonProperty(PropertyName = "DosDurationHours")]
 		public long? DosDurationHours { get; internal set; }
 
+		[JsonProperty(PropertyName = "ExpectedRoundsPerDay")]
+		public int? ExpectedRoundsPerDay { get; internal set; }
+
 		public CcjRoundConfig()
 		{
 		}
@@ -57,7 +60,7 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 			SetFilePath(filePath);
 		}
 
-		public CcjRoundConfig(Money denomination, int? confirmationTarget, decimal? coordinatorFeePercent, int? anonymitySet, long? inputRegistrationTimeout, long? connectionConfirmationTimeout, long? outputRegistrationTimeout, long? signingTimeout, int? dosSeverity, long? dosDurationHours)
+		public CcjRoundConfig(Money denomination, int? confirmationTarget, decimal? coordinatorFeePercent, int? anonymitySet, long? inputRegistrationTimeout, long? connectionConfirmationTimeout, long? outputRegistrationTimeout, long? signingTimeout, int? dosSeverity, long? dosDurationHours, int? expectedRoundsPerDay)
 		{
 			FilePath = null;
 			Denomination = Guard.NotNull(nameof(denomination), denomination);
@@ -70,6 +73,7 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 			SigningTimeout = Guard.NotNull(nameof(signingTimeout), signingTimeout);
 			DosSeverity = Guard.NotNull(nameof(dosSeverity), dosSeverity);
 			DosDurationHours = Guard.NotNull(nameof(dosDurationHours), dosDurationHours);
+			ExpectedRoundsPerDay = Guard.NotNull(nameof(expectedRoundsPerDay), expectedRoundsPerDay);
 		}
 
 		/// <inheritdoc />
@@ -98,6 +102,7 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 			SigningTimeout = 60;
 			DosSeverity = 1;
 			DosDurationHours = 730; // 1 month
+			ExpectedRoundsPerDay = 2; 
 
 			if (!File.Exists(FilePath))
 			{
@@ -118,6 +123,7 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 				SigningTimeout = config.SigningTimeout ?? SigningTimeout;
 				DosSeverity = config.DosSeverity ?? DosSeverity;
 				DosDurationHours = config.DosDurationHours ?? DosDurationHours;
+				ExpectedRoundsPerDay = config.ExpectedRoundsPerDay ?? ExpectedRoundsPerDay;
 			}
 
 			await ToFileAsync();
@@ -173,6 +179,10 @@ namespace WalletWasabi.Models.ChaumianCoinJoin
 				return true;
 			}
 			if (DosDurationHours != config.DosDurationHours)
+			{
+				return true;
+			}
+			if (ExpectedRoundsPerDay != config.ExpectedRoundsPerDay)
 			{
 				return true;
 			}
