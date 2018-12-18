@@ -1,8 +1,11 @@
 ﻿using NBitcoin;
+using NBitcoin.BouncyCastle.Math;
+using NBitcoin.Crypto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using WalletWasabi.Backend.Models.Requests;
 
 namespace WalletWasabi.Helpers
 {
@@ -54,6 +57,30 @@ namespace WalletWasabi.Helpers
 			}
 
 			return remaining;
+		}
+
+		public static byte[] SignData(this ECDSABlinding.Signer signer, byte[] data )
+		{
+			uint256 hash = new uint256(Hashes.SHA256(data));
+			BigInteger signature = signer.Sign(hash);
+			return signature.ToByteArray();
+		}
+
+		public static bool VerifySignature(this ECDSABlinding.Signer signer, byte[] data, BlindSignature signature)
+		{
+			uint256 hash = new uint256(Hashes.SHA256(data));
+			return ECDSABlinding.VerifySignature(hash, signature, signer.Key.PubKey);
+		}
+
+		public static BlindSignature UnblindSignature(this ECDSABlinding.Requester requester, byte[] blindedSignature)
+		{
+			BigInteger blinded = new BigInteger(blindedSignature);
+			return requester.UnblindSignature(blinded);
+		}
+
+		public static WrappedBlindSignature Wrap(this BlindSignature signature)
+		{
+			return WrappedBlindSignature.Wrap(signature);
 		}
 	}
 }

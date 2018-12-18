@@ -3,7 +3,6 @@ using Avalonia.Threading;
 using NBitcoin;
 using NBitcoin.Protocol;
 using NBitcoin.Protocol.Behaviors;
-using Org.BouncyCastle.Math;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -60,8 +59,6 @@ namespace WalletWasabi.Gui
 		public static string WalletBackupsDir => Path.Combine(DataDir, "WalletBackups");
 		public static Network Network => Config.Network;
 		public static string IndexFilePath => Path.Combine(DataDir, $"Index{Network}.dat");
-
-		public static BlindingRsaPubKey BlindingPubKey => Config.GetBlindingRsaPubKey();
 
 		public static string AddressManagerFilePath { get; private set; }
 		public static AddressManager AddressManager { get; private set; }
@@ -239,7 +236,7 @@ namespace WalletWasabi.Gui
 
 		public static async Task InitializeWalletServiceAsync(KeyManager keyManager)
 		{
-			ChaumianClient = new CcjClient(Network, BlindingPubKey, keyManager, Config.GetCurrentBackendUri(), Config.GetTorSocks5EndPoint());
+			ChaumianClient = new CcjClient(Network, keyManager, Config.GetCurrentBackendUri(), Config.GetTorSocks5EndPoint());
 			WalletService = new WalletService(keyManager, IndexDownloader, ChaumianClient, MemPoolService, Nodes, DataDir);
 
 			ChaumianClient.Start(0, 3);
