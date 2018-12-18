@@ -1768,7 +1768,12 @@ namespace WalletWasabi.Tests
 				httpRequestException = await Assert.ThrowsAsync<HttpRequestException>(async () => await AliceClient.CreateNewAsync(network, inputsRequest, baseUri));
 				Assert.Equal($"{HttpStatusCode.BadRequest.ToReasonString()}\nProvided proof is invalid.", httpRequestException.Message);
 
-				inputsRequest.BlindedOutputScriptHex = network.Consensus.ConsensusFactory.CreateTransaction().ToHex();
+
+				CcjRound round = coordinator.GetCurrentInputRegisterableRound();
+				ECDSABlinding.Requester requester = new ECDSABlinding.Requester();
+				uint256 msg = new uint256(Hashes.SHA256(network.Consensus.ConsensusFactory.CreateTransaction().ToBytes()));
+				uint256 blindedData = requester.BlindMessage(msg, round.Signer.R.PubKey, round.Signer.Key.PubKey);
+				inputsRequest.BlindedOutputScriptHex = ByteHelpers.ToHex(blindedData.ToBytes());
 				proof = key.SignMessage(inputsRequest.BlindedOutputScriptHex);
 				inputsRequest.Inputs.First().Proof = proof;
 				httpRequestException = await Assert.ThrowsAsync<HttpRequestException>(async () => await AliceClient.CreateNewAsync(network, inputsRequest, baseUri));
@@ -1820,11 +1825,11 @@ namespace WalletWasabi.Tests
 					Assert.Equal(1, roundState.RegisteredPeerCount);
 				}
 
-				CcjRound round = coordinator.GetCurrentInputRegisterableRound();
-				ECDSABlinding.Requester requester = new ECDSABlinding.Requester();
+				round = coordinator.GetCurrentInputRegisterableRound();
+				requester = new ECDSABlinding.Requester();
 
-				uint256 msg = new uint256(Hashes.SHA256(key.ScriptPubKey.ToBytes()));
-				uint256 blindedData = requester.BlindMessage(msg, round.Signer.R.PubKey, round.Signer.Key.PubKey);
+				msg = new uint256(Hashes.SHA256(key.ScriptPubKey.ToBytes()));
+				blindedData = requester.BlindMessage(msg, round.Signer.R.PubKey, round.Signer.Key.PubKey);
 				inputsRequest.BlindedOutputScriptHex = ByteHelpers.ToHex(blindedData.ToBytes());
 				proof = key.SignMessage(inputsRequest.BlindedOutputScriptHex);
 				inputsRequest.Inputs.First().Proof = proof;
@@ -1839,7 +1844,7 @@ namespace WalletWasabi.Tests
 					Assert.Equal(1, roundState.RegisteredPeerCount);
 				}
 
-				inputsRequest.BlindedOutputScriptHex = network.Consensus.ConsensusFactory.CreateTransaction().ToHex();
+				inputsRequest.BlindedOutputScriptHex = ByteHelpers.ToHex(uint256.One.ToBytes());
 				proof = key.SignMessage(inputsRequest.BlindedOutputScriptHex);
 				inputsRequest.Inputs.First().Proof = proof;
 				inputsRequest.Inputs = new List<InputProofModel> { inputsRequest.Inputs.First(), inputsRequest.Inputs.First() };

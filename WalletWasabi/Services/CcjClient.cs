@@ -498,7 +498,7 @@ namespace WalletWasabi.Services
 						var inputProof = new InputProofModel
 						{
 							Input = coin.GetTxoRef(),
-							Proof = coin.Secret.PrivateKey.SignMessage(blind.ToBytes())
+							Proof = coin.Secret.PrivateKey.SignMessage(ByteHelpers.ToHex(blind.ToBytes()))
 						};
 						inputProofs.Add(inputProof);
 					}

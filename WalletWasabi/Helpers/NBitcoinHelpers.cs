@@ -61,8 +61,9 @@ namespace WalletWasabi.Helpers
 
 		public static byte[] SignData(this ECDSABlinding.Signer signer, byte[] data )
 		{
-			uint256 hash = new uint256(Hashes.SHA256(data));
-			BigInteger signature = signer.Sign(hash);
+			if (data.Length != 32)
+				throw new ArgumentException("Invalid data lenght for a blinded message", nameof(data));
+			BigInteger signature = signer.Sign(new uint256(data));
 			return signature.ToByteArray();
 		}
 
