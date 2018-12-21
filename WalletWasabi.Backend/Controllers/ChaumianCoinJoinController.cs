@@ -198,17 +198,9 @@ namespace WalletWasabi.Backend.Controllers
 						TxOut txout = getTxOutResponse.TxOut;
 
 						var address = (BitcoinWitPubKeyAddress)txout.ScriptPubKey.GetDestinationAddress(Network);
+
 						// Check if proofs are valid.
-						bool validProof;
-						try
-						{
-							validProof = address.VerifyMessage(request.BlindedOutputScript, inputProof.Proof);
-						}
-						catch (FormatException ex)
-						{
-							return BadRequest($"Provided proof is invalid: {ex.Message}");
-						}
-						if (!validProof)
+						if (!address.VerifyMessage(request.BlindedOutputScript, inputProof.Proof))
 						{
 							await Coordinator.UtxoReferee.BanUtxosAsync(1, DateTimeOffset.UtcNow, forceNoted: false, round.RoundId, outpoint);
 
