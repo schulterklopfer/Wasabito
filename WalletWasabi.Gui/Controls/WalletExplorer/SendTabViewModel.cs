@@ -91,7 +91,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			FeeDisplayFormat = (FeeDisplayFormat)(Enum.ToObject(typeof(FeeDisplayFormat), Global.UiConfig.FeeDisplayFormat) ?? FeeDisplayFormat.SatoshiPerByte);
 			SetFeesAndTexts();
 
-			Global.Synchronizer.PropertyChanged += Synchronizer_PropertyChanged;
+			// Global.Synchronizer.PropertyChanged += Synchronizer_PropertyChanged;
 
 			_disposables.Add(
 			this.WhenAnyValue(x => x.Amount).Subscribe(amount =>
@@ -854,6 +854,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			Global.Synchronizer.PropertyChanged -= Synchronizer_PropertyChanged;
 			CoinList.SelectionChanged -= CoinList_SelectionChanged;
 			_disposables.Dispose();
+			_disposables = null;
 			_disposed = true;
 		}
 

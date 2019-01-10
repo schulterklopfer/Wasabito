@@ -11,15 +11,15 @@ namespace WalletWasabi.Models
 	/// An UTXO that knows more.
 	/// </summary>
 	[JsonObject(MemberSerialization.OptIn)]
-	public class SmartCoin : IEquatable<SmartCoin>, INotifyPropertyChanged
+	public class SmartCoin : IEquatable<SmartCoin>//, INotifyPropertyChanged
 	{
 		#region Events
 
-		public event PropertyChangedEventHandler PropertyChanged;
+//		public event PropertyChangedEventHandler PropertyChanged;
 
 		private void OnPropertyChanged(string propertyName)
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+//			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		}
 
 		#endregion Events

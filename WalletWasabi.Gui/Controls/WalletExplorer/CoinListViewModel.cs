@@ -203,12 +203,12 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				MyComparer);
 
 			_disposables.Add(
-			_rootlist.Connect()
+			_rootlist.Connect()/* 
 				.OnItemAdded(cvm =>
 					cvm.PropertyChanged += Coin_PropertyChanged)
 				.OnItemRemoved(cvm => { 
 					cvm.PropertyChanged -= Coin_PropertyChanged;
-					cvm.Dispose();})
+					cvm.Dispose();})*/
 				.Sort(MyComparer, comparerChanged: sortChanged, resetThreshold: 5)
 				.Bind(out _coinViewModels)
 				.ObserveOn(RxApp.MainThreadScheduler)
@@ -220,7 +220,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				_rootlist.Add(new CoinViewModel(sc));
 			}
 
-			Global.WalletService.Coins.CollectionChanged += Coins_CollectionGlobalChanged;
+//			Global.WalletService.Coins.CollectionChanged += Coins_CollectionGlobalChanged;
 /*
 			_disposables.Add(
 			this.WhenAnyValue(x => x.AmountSortDirection).Subscribe(x =>
