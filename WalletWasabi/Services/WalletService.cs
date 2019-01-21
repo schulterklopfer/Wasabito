@@ -236,8 +236,6 @@ namespace WalletWasabi.Services
 							try
 							{
 								await SendTransactionAsync(tx);
-
-								ProcessTransaction(tx);
 							}
 							catch (Exception ex)
 							{
