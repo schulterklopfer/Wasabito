@@ -97,42 +97,72 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 			{
 				await RefreshHardwareWalletListAsync();
 				HardwareWalletRefreshCancel?.Dispose();
+				HardwareWalletRefreshCancel = null;
 			});
 		}
 
-		private CancellationTokenSource HardwareWalletRefreshCancel { get; }
-		private bool HwTabSelectedOnce { get; set; } = false;
+		private CancellationTokenSource HardwareWalletRefreshCancel { get; set; }
+		private bool HwTabAutomaticallySelectedOnce { get; set; } = false;
 
 		private async Task RefreshHardwareWalletListAsync()
 		{
 			try
 			{
+				int waitTime = 3000;
 				while (!HardwareWalletRefreshCancel.IsCancellationRequested)
 				{
 					try
 					{
+						if (LoadWalletViewModelDesktop.IsWalletOpened || LoadWalletViewModelHardware.IsWalletOpened)
+						{
+							continue; // Will wait 3sec, because of the finally.
+						}
+
 						var hwis = await HwiProcessManager.EnumerateAsync();
 						LoadWalletViewModelHardware.TryRefreshHardwareWallets(hwis);
 
-						if (hwis.Any() && !HwTabSelectedOnce)
+						if (hwis.Any())
 						{
-							try
+							waitTime = 7000;
+							if (!HwTabAutomaticallySelectedOnce)
 							{
-								HwTabSelectedOnce = true;
-								SelectHardwareWallet();
+								try
+								{
+									HwTabAutomaticallySelectedOnce = true;
+									SelectHardwareWallet();
+								}
+								catch (Exception ex)
+								{
+									Logger.LogWarning<MainWindow>(ex);
+								}
 							}
-							catch (Exception ex)
-							{
-								Logger.LogWarning<MainWindow>(ex);
-							}
+
+							// Stop enumerating after you find one. Hardware wallets are acting up, sometimes fingerprint doesn't arrive for example.
+							break;
+							//foreach (var hwi in hwis)
+							//{
+							//	// https://github.com/zkSNACKs/WalletWasabi/issues/1344#issuecomment-484607454
+							//	if (hwi.Type == HardwareWalletType.Trezor // If Trezor Model T has passphrase set then user must keep confirming the enumerate command -> https://github.com/zkSNACKs/WalletWasabi/pull/1341#issuecomment-483916529
+							//		|| hwi.Type == HardwareWalletType.Coldcard) //https://github.com/zkSNACKs/WalletWasabi/issues/1344#issuecomment-484691409
+							//	{
+							//		return;
+							//	}
+							//}
+						}
+						else
+						{
+							waitTime = 3000;
 						}
 					}
 					catch (Exception ex)
 					{
-						Logger.LogError<WalletManagerViewModel>(ex);
+						LoadWalletViewModelHardware.SetValidationMessage(ex.ToTypeMessageString());
+						Logger.LogWarning<WalletManagerViewModel>(ex);
 					}
-
-					await Task.Delay(3000, HardwareWalletRefreshCancel.Token);
+					finally
+					{
+						await Task.Delay(waitTime, HardwareWalletRefreshCancel.Token);
+					}
 				}
 			}
 			catch (TaskCanceledException ex)

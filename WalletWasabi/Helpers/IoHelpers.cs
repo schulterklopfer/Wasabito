@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,6 @@ namespace System.IO
 	{
 		private const string OldExtension = ".old";
 		private const string NewExtension = ".new";
-		private const string WeakLockExtension = ".weaklock";
 
 		// http://stackoverflow.com/a/14933880/2061103
 		public static async Task DeleteRecursivelyWithMagicDustAsync(string destinationDir)
@@ -33,7 +33,9 @@ namespace System.IO
 				catch (IOException)
 				{
 					if (gnomes == magicDust)
+					{
 						throw;
+					}
 					// System.IO.IOException: The directory is not empty
 					Logger.LogDebug($"Gnomes prevent deletion of {destinationDir}! Applying magic dust, attempt #{gnomes}.", nameof(IoHelpers));
 
@@ -44,7 +46,9 @@ namespace System.IO
 				catch (UnauthorizedAccessException)
 				{
 					if (gnomes == magicDust)
+					{
 						throw;
+					}
 					// Wait, maybe another software make us authorized a little later
 					Logger.LogDebug($"Gnomes prevent deletion of {destinationDir}! Applying magic dust, attempt #{gnomes}.", nameof(IoHelpers));
 
@@ -244,6 +248,37 @@ namespace System.IO
 			if (!string.IsNullOrEmpty(dir)) // root
 			{
 				Directory.CreateDirectory(dir); // It does not fail if it exists.
+			}
+		}
+
+		public static byte[] GetHashFile(string filePath)
+		{
+			var bytes = File.ReadAllBytes(filePath);
+			using (var sha = new SHA256Managed())
+			{
+				return sha.ComputeHash(bytes, 0, bytes.Length);
+			}
+		}
+
+		public static bool CheckExpectedHash(string filePath, string sourceFolderPath)
+		{
+			var fileHash = GetHashFile(filePath);
+			try
+			{
+				var digests = File.ReadAllLines(Path.Combine(sourceFolderPath, "digests.txt"));
+				foreach (var digest in digests)
+				{
+					var expectedHash = ByteHelpers.FromHex(digest);
+					if (ByteHelpers.CompareFastUnsafe(fileHash, expectedHash))
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+			catch (Exception)
+			{
+				return false;
 			}
 		}
 

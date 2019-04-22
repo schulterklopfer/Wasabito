@@ -45,7 +45,10 @@ namespace WalletWasabi.TorSocks5
 
 		public void Start(bool ensureRunning, string dataDir)
 		{
-			if (TorSocks5EndPoint == null) return;
+			if (TorSocks5EndPoint == null)
+			{
+				return;
+			}
 
 			new Thread(delegate () // Don't ask. This is the only way it worked on Win10/Ubuntu18.04/Manjuro(1 processor VM)/Fedora(1 processor VM)
 			{
@@ -90,7 +93,7 @@ namespace WalletWasabi.TorSocks5
 							Logger.LogInfo<TorProcessManager>($"Tor instance NOT found at {torPath}. Attempting to acquire it...");
 							InstallTor(fullBaseDirectory, torDir);
 						}
-						else if (new FileInfo(torPath).CreationTimeUtc < new DateTime(2019, 01, 26, 0, 0, 0, 0, DateTimeKind.Utc))
+						else if (!IoHelpers.CheckExpectedHash(torPath, Path.Combine(fullBaseDirectory, "TorDaemons")))
 						{
 							Logger.LogInfo<TorProcessManager>($"Updating Tor...");
 
@@ -213,7 +216,10 @@ namespace WalletWasabi.TorSocks5
 
 		public async Task<bool> IsTorRunningAsync()
 		{
-			if (TorSocks5EndPoint == null) return true;
+			if (TorSocks5EndPoint == null)
+			{
+				return true;
+			}
 
 			using (var client = new TorSocks5Client(TorSocks5EndPoint))
 			{
@@ -244,7 +250,10 @@ namespace WalletWasabi.TorSocks5
 
 		public void StartMonitor(TimeSpan torMisbehaviorCheckPeriod, TimeSpan checkIfRunningAfterTorMisbehavedFor, string dataDirToStartWith, Uri fallBackTestRequestUri)
 		{
-			if (TorSocks5EndPoint == null) return;
+			if (TorSocks5EndPoint == null)
+			{
+				return;
+			}
 
 			Logger.LogInfo<TorProcessManager>("Starting Tor monitor...");
 			Interlocked.Exchange(ref _running, 1);
@@ -324,7 +333,10 @@ namespace WalletWasabi.TorSocks5
 				{
 					Interlocked.CompareExchange(ref _running, 2, 1); // If running, make it stopping.
 
-					if (TorSocks5EndPoint == null) Interlocked.Exchange(ref _running, 3);
+					if (TorSocks5EndPoint == null)
+					{
+						Interlocked.Exchange(ref _running, 3);
+					}
 
 					Stop?.Cancel();
 					while (IsStopping)

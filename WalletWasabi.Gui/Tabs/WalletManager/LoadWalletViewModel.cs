@@ -12,6 +12,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reactive;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,6 +42,8 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 		private bool _isBusy;
 		private string _loadButtonText;
 		private bool _isHwWalletSearchTextVisible;
+
+		public bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
 		private WalletManagerViewModel Owner { get; }
 		public LoadWalletType LoadWalletType { get; }
@@ -159,7 +162,7 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 			SuccessMessage = "";
 		}
 
-		private void SetValidationMessage(string message)
+		public void SetValidationMessage(string message)
 		{
 			WarningMessage = "";
 			ValidationMessage = message;
@@ -206,30 +209,30 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 				SetLoadButtonText(value);
 				SetWalletStates();
 
+				const string loadingStatusText = "Loading...";
 				if (value)
 				{
-					MainWindowViewModel.Instance.StatusBar.SetStatusAndDoUpdateActions("Loading...");
+					MainWindowViewModel.Instance.StatusBar.AddStatus(loadingStatusText);
 				}
 				else
 				{
-					MainWindowViewModel.Instance.StatusBar.SetStatusAndDoUpdateActions();
+					MainWindowViewModel.Instance.StatusBar.RemoveStatus(loadingStatusText);
 				}
 			}
 		}
 
 		public override void OnCategorySelected()
 		{
-			if (IsHardwareWallet) return;
+			if (IsHardwareWallet)
+			{
+				return;
+			}
+
 			lock (WalletLock)
 			{
 				Wallets.Clear();
 				Password = "";
 				SetValidationMessage("");
-
-				if (!File.Exists(Global.WalletsDir))
-				{
-					Directory.CreateDirectory(Global.WalletsDir);
-				}
 
 				var directoryInfo = new DirectoryInfo(Global.WalletsDir);
 				var walletFiles = directoryInfo.GetFiles("*.json", SearchOption.TopDirectoryOnly).OrderByDescending(t => t.LastAccessTimeUtc);
@@ -334,37 +337,15 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 						return null;
 					}
 
-					ExtPubKey extPubKey = await HwiProcessManager.GetXpubAsync(selectedWallet.HardwareWalletInfo);
-
-					var walletFiles = new DirectoryInfo(Global.WalletsDir);
-					var walletBackupFiles = new DirectoryInfo(Global.WalletBackupsDir);
-
-					// Start searching for the real wallet name.
-					walletName = null;
-					var walletFileNames = walletFiles.EnumerateFiles()
-															.Concat(walletBackupFiles.EnumerateFiles())
-															.OrderByDescending(x => x.LastAccessTimeUtc)
-															.ToList();
-					foreach (FileInfo walletFile in walletFileNames)
+					if (!TryFindWalletByMasterFingerprint(selectedWallet.HardwareWalletInfo.MasterFingerprint, out walletName))
 					{
-						if (walletFile?.Extension?.Equals(".json", StringComparison.OrdinalIgnoreCase) is true)
-						{
-							var km = KeyManager.FromFile(walletFile.FullName);
-							if (km.ExtPubKey == extPubKey) // We already had it.
-							{
-								walletName = walletFile.Name;
-								break;
-							}
-						}
-					}
+						ExtPubKey extPubKey = await HwiProcessManager.GetXpubAsync(selectedWallet.HardwareWalletInfo);
 
-					if (walletName == null)
-					{
 						Logger.LogInfo<LoadWalletViewModel>("Hardware wallet wasn't used previously on this computer. Creating new wallet file.");
 
 						walletName = Utils.GetNextHardwareWalletName(selectedWallet.HardwareWalletInfo);
 						var path = Global.GetWalletFullPath(walletName);
-						KeyManager.CreateNewWatchOnly(extPubKey, path);
+						KeyManager.CreateNewHardwareWalletWatchOnly(selectedWallet.HardwareWalletInfo.MasterFingerprint, extPubKey, path);
 					}
 				}
 
@@ -417,6 +398,44 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 			}
 		}
 
+		private static bool TryFindWalletByMasterFingerprint(HDFingerprint masterFingerprint, out string walletName)
+		{
+			// Start searching for the real wallet name.
+			walletName = null;
+
+			var walletFiles = new DirectoryInfo(Global.WalletsDir);
+			var walletBackupFiles = new DirectoryInfo(Global.WalletBackupsDir);
+
+			List<FileInfo> walletFileNames = new List<FileInfo>();
+
+			if (walletFiles.Exists)
+			{
+				walletFileNames.AddRange(walletFiles.EnumerateFiles());
+			}
+
+			if (walletBackupFiles.Exists)
+			{
+				walletFileNames.AddRange(walletFiles.EnumerateFiles());
+			}
+
+			walletFileNames = walletFileNames.OrderByDescending(x => x.LastAccessTimeUtc).ToList();
+
+			foreach (FileInfo walletFile in walletFileNames)
+			{
+				if (walletFile?.Extension?.Equals(".json", StringComparison.OrdinalIgnoreCase) is true
+					&& KeyManager.TryGetMasterFingerprintFromFile(walletFile.FullName, out HDFingerprint fp))
+				{
+					if (fp == masterFingerprint) // We already had it.
+					{
+						walletName = walletFile.Name;
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
 		public async Task LoadWalletAsync()
 		{
 			try
@@ -436,7 +455,7 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 						await Global.InitializeWalletServiceAsync(keyManager);
 					});
 					// Successffully initialized.
-					IoC.Get<IShell>().RemoveDocument(Owner);
+					Owner.OnClose();
 					// Open Wallet Explorer tabs
 					if (Global.WalletService.Coins.Any())
 					{

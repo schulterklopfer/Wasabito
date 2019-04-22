@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using NBitcoin;
+using System.Collections.Generic;
 using WalletWasabi.Helpers;
-using NBitcoin;
-using NBitcoin.BIP174;
 
 namespace WalletWasabi.Models
 {

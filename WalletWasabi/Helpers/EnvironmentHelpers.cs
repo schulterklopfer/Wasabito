@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using WalletWasabi.Logging;
-using Microsoft.Win32;
 
 namespace WalletWasabi.Helpers
 {
@@ -11,8 +11,8 @@ namespace WalletWasabi.Helpers
 	{
 		private const int ProcessorCountRefreshIntervalMs = 30000;
 
-		private static volatile int _processorCount;
-		private static volatile int _lastProcessorCountRefreshTicks;
+		private static volatile int InternalProcessorCount;
+		private static volatile int LastProcessorCountRefreshTicks;
 
 		/// <summary>
 		/// https://github.com/i3arnon/ConcurrentHashSet/blob/master/src/ConcurrentHashSet/PlatformHelper.cs
@@ -22,19 +22,19 @@ namespace WalletWasabi.Helpers
 			get
 			{
 				var now = Environment.TickCount;
-				if (_processorCount == 0 || now - _lastProcessorCountRefreshTicks >= ProcessorCountRefreshIntervalMs)
+				if (InternalProcessorCount == 0 || now - LastProcessorCountRefreshTicks >= ProcessorCountRefreshIntervalMs)
 				{
-					_processorCount = Environment.ProcessorCount;
-					_lastProcessorCountRefreshTicks = now;
+					InternalProcessorCount = Environment.ProcessorCount;
+					LastProcessorCountRefreshTicks = now;
 				}
 
-				return _processorCount;
+				return InternalProcessorCount;
 			}
 		}
 
 		public static string GetDataDir(string appName)
 		{
-			string directory = null;
+			string directory;
 
 			if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
@@ -63,7 +63,10 @@ namespace WalletWasabi.Helpers
 				}
 			}
 
-			if (Directory.Exists(directory)) return directory;
+			if (Directory.Exists(directory))
+			{
+				return directory;
+			}
 
 			Logger.LogInfo($"Creating data directory at `{directory}`.");
 			Directory.CreateDirectory(directory);

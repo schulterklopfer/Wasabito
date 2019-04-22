@@ -196,7 +196,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 				try
 				{
-					await Global.ChaumianClient.DequeueCoinsFromMixAsync(selectedCoins.Select(c => c.Model).ToArray());
+					await Global.ChaumianClient.DequeueCoinsFromMixAsync(selectedCoins.Select(c => c.Model).ToArray(), "Dequeued by the user.");
 				}
 				catch (Exception ex)
 				{
@@ -363,7 +363,11 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			try
 			{
 				var selectedCoin = CoinsList.SelectedCoin;
-				if (selectedCoin is null) return;
+				if (selectedCoin is null)
+				{
+					return;
+				}
+
 				await DoDequeueAsync(new[] { selectedCoin });
 			}
 			catch (Exception ex)

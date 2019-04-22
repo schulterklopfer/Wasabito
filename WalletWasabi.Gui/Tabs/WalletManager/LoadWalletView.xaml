@@ -17,12 +17,14 @@
           <StackPanel IsVisible="{Binding IsHardwareWallet}" Spacing="8">
             <StackPanel>
               <TextBlock Text="Limitations?" FontWeight="Bold" />
+              <TextBlock Text="- This is an EXPERIMENTAL feature." />
               <TextBlock Text="- Currently all hardware wallets on the market are incompatible with coinjoins." />
-              <TextBlock Text="- Wasabi only supports bech32 hardware wallet keypaths." />
+              <TextBlock Text="- Only bech32 keypaths are supported, so your legacy hardware wallet transactions won't show up in Wasabi." />
             </StackPanel>
             <StackPanel>
               <TextBlock Text="Which hardware wallets are currently supported?" FontWeight="Bold" />
-              <TextBlock Text="- Only Coldcard, but Wasabi may work with Digital BitBox, KeepKey, Ledger Nano S and Trezor One, but they were not yet tested." TextWrapping="Wrap" />
+              <TextBlock Text="- Coldcard and Trezor Model T." TextWrapping="Wrap" />
+              <TextBlock Text="- While other hardware wallets may work, they were not tested by Wasabi developers." TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Grid>
@@ -62,6 +64,8 @@
               <TextBlock Text="Looking for hardware wallets..." FontWeight="Bold" />
             </StackPanel>
             <TextBlock Text="Make sure you set up and logged into the device, usually with a PIN. Some hardware wallets are picky about their USB cables, so you may want to try out multiple ones." TextWrapping="Wrap" />
+            <TextBlock IsVisible="{Binding IsLinux}" Text="Also make sure that you properly applied udev rules. These are necessary for the devices to be reachable on Linux environments:" TextWrapping="Wrap" />
+            <controls:ExtendedTextBox IsVisible="{Binding IsLinux}" Text="https://github.com/bitcoin-core/HWI/tree/master/udev" Classes="selectableTextBlock hyperLink" />
           </StackPanel>
         </Grid>
         <Grid Classes="content">
