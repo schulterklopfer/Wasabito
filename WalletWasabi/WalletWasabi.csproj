@@ -9,19 +9,19 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>bin\Debug\netcoreapp2.2\WalletWasabi.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile></DocumentationFile>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <ErrorReport>none</ErrorReport>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <DocumentationFile>bin\Debug\netcoreapp2.2\WalletWasabi.xml</DocumentationFile>
-  </PropertyGroup>
-
   <ItemGroup>
-	<PackageReference Include="NBitcoin" Version="4.1.2.6" />
+	<PackageReference Include="NBitcoin" Version="4.1.2.7" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.5.0" />  </ItemGroup>
   <ItemGroup>
     <Folder Include="Gma\QrCodeNet\Encoding\ReedSolomon\" />
