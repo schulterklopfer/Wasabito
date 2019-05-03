@@ -18,6 +18,11 @@ namespace WalletWasabi.Gui.CommandLine
 			var showVersion = false;
 
 			Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
+			
+			if (args.Length == 0)
+			{
+				return true;
+			}
 
 			if (args.Length == 0)
 			{
