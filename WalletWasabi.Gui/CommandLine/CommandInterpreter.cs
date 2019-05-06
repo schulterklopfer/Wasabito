@@ -16,13 +16,7 @@ namespace WalletWasabi.Gui.CommandLine
 		public static async Task<bool> ExecuteCommandsAsync(string[] args)
 		{
 			var showVersion = false;
-			var pass = false;
 			Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
-			
-			if (args.Length == 0)
-			{
-				return true;
-			}
 
 			var suite = new CommandSet("wassabee") {
 					"Usage: wassabee [OPTIONS]+",
@@ -31,7 +25,7 @@ namespace WalletWasabi.Gui.CommandLine
 					{ "v|version", "Displays Wasabi version and exit.",
 						x => showVersion = x != null},
 					{ "d|datadir=", "Directory path where store all the Wasabi data.",
-						x => { Global.SetDataDir(x); pass = true; }},
+						x => { 	Global.SetDataDir(x); }},
 					"",
 					"Available commands are:",
 					"",
@@ -53,8 +47,14 @@ namespace WalletWasabi.Gui.CommandLine
 			}
 
 			// if no command was provide we have to lunch the GUI
-			if (!commandProccessed && pass)
+			if (!commandProccessed)
 			{
+				var nonProcessedOptions = suite.Options.Parse(args);
+				// If there is some unprocessed argument then something was wrong.
+				if( nonProcessedOptions.Any())
+				{
+					return false;
+				}
 				return true; // run GUI
 			}
 
