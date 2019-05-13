@@ -12,13 +12,27 @@ namespace WalletWasabi.Gui.CommandLine
 {
 	public static class CommandInterpreter
 	{
+		private static Command _mixerCommand = new MixerCommand();
+		private static Command _passwordFinderCommand = new PasswordFinderCommand();
+		private static TextWriter _output = Console.Out;
+		private static TextWriter _error = Console.Error;
+
+		// This method is for unit testing porpuse only. 
+		public static void Configure(Command mixerCommand, Command passwordFinderCommand, TextWriter output, TextWriter error)
+		{
+			_mixerCommand = mixerCommand;
+			_passwordFinderCommand = passwordFinderCommand;
+			_output = output;
+			_error = error;
+		}
+
 		/// <returns>If the GUI should run or not.</returns>
 		public static async Task<bool> ExecuteCommandsAsync(string[] args)
 		{
 			var showVersion = false;
 			Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
 
-			var suite = new CommandSet("wassabee") {
+			var suite = new CommandSet("wassabee", _output, _error) {
 					"Usage: wassabee [OPTIONS]+",
 					"Launches Wasabi Wallet.",
 					"",
@@ -29,8 +43,8 @@ namespace WalletWasabi.Gui.CommandLine
 					"",
 					"Available commands are:",
 					"",
-					new MixerCommand(),
-					new PasswordFinderCommand()
+					_mixerCommand,
+					_passwordFinderCommand
 				};
 
 			EnsureBackwardCompatibilityWithOldParameters(ref args);
@@ -73,19 +87,19 @@ namespace WalletWasabi.Gui.CommandLine
 
 		private static void ShowVersion()
 		{
-			Console.WriteLine($"Wasabi Client Version: {Constants.ClientVersion}");
-			Console.WriteLine($"Compatible Coordinator Version: {Constants.BackendMajorVersion}");
+			_output.WriteLine($"Wasabi Client Version: {Constants.ClientVersion}");
+			_output.WriteLine($"Compatible Coordinator Version: {Constants.BackendMajorVersion}");
 		}
 
 		private static void ShowHelp(OptionSet p)
 		{
 			ShowVersion();
-			Console.WriteLine();
-			Console.WriteLine("Usage: wassabee [OPTIONS]+");
-			Console.WriteLine("Launches Wasabi Wallet.");
-			Console.WriteLine();
-			Console.WriteLine("Options:");
-			p.WriteOptionDescriptions(Console.Out);
+			_output.WriteLine();
+			_output.WriteLine("Usage: wassabee [OPTIONS]+");
+			_output.WriteLine("Launches Wasabi Wallet.");
+			_output.WriteLine();
+			_output.WriteLine("Options:");
+			p.WriteOptionDescriptions(_output);
 		}
 	}
 }
