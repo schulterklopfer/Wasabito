@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Crypto;
 using WalletWasabi.Gui.Dialogs;
+using WalletWasabi.Gui.Rpc;
 using WalletWasabi.Gui.ViewModels;
 using WalletWasabi.Helpers;
 using WalletWasabi.Hwi;
@@ -58,6 +59,8 @@ namespace WalletWasabi.Gui
 		public static UiConfig UiConfig { get; private set; }
 
 		public static Network Network => Config.Network;
+
+		public static JsonRpcServer RpcServer { get; private set; }
 
 		static Global()
 		{
@@ -289,6 +292,9 @@ namespace WalletWasabi.Gui
 
 			Synchronizer.Start(requestInterval, TimeSpan.FromMinutes(5), maxFiltSyncCount);
 			Logger.LogInfo("Start synchronizing filters...");
+
+			RpcServer = new JsonRpcServer();
+			// RpcServer.Start(); // uncomment this in order to make it work 
 
 			#endregion SynchronizerInitialization
 
