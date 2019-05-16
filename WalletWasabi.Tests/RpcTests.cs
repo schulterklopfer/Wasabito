@@ -16,7 +16,7 @@ namespace WalletWasabi.Tests
 
 			Assert.Equal("2.0", request.JsonRPC);
 			Assert.Equal("subtract", request.Method);
-			Assert.Equal(1, request.Id);
+			Assert.Equal("1", request.Id);
 			Assert.NotNull(request.Parameters);
 			Assert.Equal(42, (int)request.Parameters[0]);
 			Assert.Equal(23, (int)request.Parameters[1]);
@@ -26,7 +26,7 @@ namespace WalletWasabi.Tests
 
 			Assert.Equal("2.0", request.JsonRPC);
 			Assert.Equal("subtract", request.Method);
-			Assert.Equal(2, request.Id);
+			Assert.Equal("2", request.Id);
 			Assert.NotNull(request.Parameters);
 			Assert.Equal(23, request.Parameters.Value<int>("subtrahend"));
 			Assert.Equal(42, request.Parameters.Value<int>("minuend"));

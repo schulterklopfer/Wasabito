@@ -24,28 +24,4 @@ namespace WalletWasabi.Gui.Rpc
 			return JsonConvert.SerializeObject(this, settings);
 		}
 	}
-
-	public class JsonRpcResultResponse<TResult> : JsonRpcResponse 
-	{
-		public JsonRpcResultResponse(TResult result = default) 
-			: base()
-		{
-			Result = result;
-		}
-
-		[JsonProperty("result", Order = 2)]
-		public TResult Result { get; }
-	}
-
-	public class JsonRpcErrorResponse<TError> : JsonRpcResponse 
-	{
-		public JsonRpcErrorResponse(TError result = default) 
-			: base()
-		{
-			Result = result;
-		}
-
-		[JsonProperty("error", Order = 2)]
-		public TError Result { get; }
-	}
 }
