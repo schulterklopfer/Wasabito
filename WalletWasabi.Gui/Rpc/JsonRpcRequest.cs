@@ -38,4 +38,3 @@ namespace WalletWasabi.Gui.Rpc
 		public JToken Parameters { get;  }
 	}
 }
-

@@ -57,4 +57,3 @@ namespace WalletWasabi.Gui.Rpc
 		public string Message { get; }
 	}
 }
-

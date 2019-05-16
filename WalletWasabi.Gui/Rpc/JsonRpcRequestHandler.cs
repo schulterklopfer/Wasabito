@@ -47,7 +47,7 @@ namespace WalletWasabi.Gui.Rpc
 		private void LoadServiceInfo()
 		{
 			var serviceType = _service.GetType();
-			var publicMethods = serviceType.GetMethods() ; 
+			var publicMethods = serviceType.GetMethods();
 			foreach(var methodInfo in publicMethods)
 			{
 				var attrs = methodInfo.GetCustomAttributes();  
@@ -62,6 +62,5 @@ namespace WalletWasabi.Gui.Rpc
 				}
 			}
 		}
-
 	}
 }
