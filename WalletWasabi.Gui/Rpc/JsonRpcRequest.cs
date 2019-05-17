@@ -54,7 +54,7 @@ namespace WalletWasabi.Gui.Rpc
 		/// The Server MUST reply with the same value in the Response object if included.
 		/// This member is used to correlate the context between the two objects.
 		/// </summary>
-		[JsonProperty("id", Required = Required.Always)]
+		[JsonProperty("id")]
 		public string Id { get; }
 
 		/// <summary>
@@ -72,5 +72,11 @@ namespace WalletWasabi.Gui.Rpc
 		/// </summary>
 		[JsonProperty("params")]
 		public JToken Parameters { get;  }
+
+		/// <summary>
+		/// Requests with null Id are called notification requests and indicate the
+		/// client is not interested in receiving a response.
+		/// </summary>
+		public bool IsNotification => Id == null;
 	}
 }

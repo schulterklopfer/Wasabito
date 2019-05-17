@@ -22,7 +22,7 @@ namespace WalletWasabi.Gui.Rpc
 		public void Start()
 		{
 			_server.Start();
-			Task.Run(()=>{
+			Task.Run(async ()=>{
 				var service = new WasabiJsonRpcService();
 				var handler = new JsonRpcRequestHandler(service);
 
@@ -34,13 +34,15 @@ namespace WalletWasabi.Gui.Rpc
 
 					//if(request.HttpMethod != "post" || !request.HasEntityBody) // error
 					var reader = new StreamReader(request.InputStream);
-					var body = reader.ReadToEnd();
-					var result = handler.Handle(body);
-
-					var output = response.OutputStream;
-					var buffer = Encoding.UTF8.GetBytes(result);
-					output.Write(buffer, 0, buffer.Length);
-
+					var body = await reader.ReadToEndAsync();
+					var result = await handler.HandleAsync(body);
+					
+					if(!string.IsNullOrEmpty(result))
+					{
+						var output = response.OutputStream;
+						var buffer = Encoding.UTF8.GetBytes(result);
+						await output.WriteAsync(buffer, 0, buffer.Length);
+					}
 					context.Response.Close();
 				}
 			});
