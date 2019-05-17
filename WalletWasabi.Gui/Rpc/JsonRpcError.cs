@@ -14,8 +14,13 @@ namespace WalletWasabi.Gui.Rpc
 		InternalError  = -32603,  // Internal JSON-RPC error.
 	}
 
+	/// <summary>
+	/// When a rpc call encounters an error, the Response Object MUST contain the error 
+	/// member with a value that is a Object with the following members.
+	/// </summary>
 	public class JsonRpcError
 	{
+		// Default error messages for standard JsonRpcErrorCodes 
 		private static Dictionary<JsonRpcErrorCodes, string> Messages = new Dictionary<JsonRpcErrorCodes, string> {
 			[JsonRpcErrorCodes.ParseError]     = "Parse error",
 			[JsonRpcErrorCodes.InvalidRequest] = "Invalid Request",
@@ -24,36 +29,38 @@ namespace WalletWasabi.Gui.Rpc
 			[JsonRpcErrorCodes.InternalError]  = "Internal error",
 		};
 
+		/// <summary>
+		/// Initializes a new instance.
+		/// </summary>
+		/// <param name="code">The error code to return. It can be one of the already defined or any other.</param> 
+		/// <param name="message">The error message to use. In case null is passed, it uses the default descriptions.</param> 
 		public  JsonRpcError(JsonRpcErrorCodes code, string message=null)
 		{
 			Code = (int)code;
-			if(message != null)
-			{
-				Message = message;
-			}
-			else
-			{
-				if(Messages.ContainsKey(code))
-				{
-					Message = Messages[code];
-				}
-				else
-				{
-					Message = "Server error";
-				}
-			}
+			Message = message ?? GetMessage(code);
 		}
 
-		public  JsonRpcError(int code, string message)
-		{
-			Code = code;
-			Message = message;
-		}
-
+		/// <summary>
+		/// A Number that indicates the error type that occurred.
+		/// This MUST be an integer.
+		/// </summary>
 		[JsonProperty("code", Order = 1)]
 		public int Code { get; }
 
+		/// <summary>
+		/// A String providing a short description of the error.
+		/// The message SHOULD be limited to a concise single sentence.
+		/// </summary>
 		[JsonProperty("message", Order = 2)]
 		public string Message { get; }
+
+		private string GetMessage(JsonRpcErrorCodes code)
+		{
+			if(Messages.TryGetValue(code, out var message))
+			{
+				return message;
+			}
+			return "Server error";
+		}
 	}
 }

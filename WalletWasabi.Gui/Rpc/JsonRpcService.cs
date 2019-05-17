@@ -11,12 +11,12 @@ namespace WalletWasabi.Gui.Rpc
 			return new JsonRpcResultResponse<TResult>(data);
 		}
 
-		protected JsonRpcErrorResponse<JsonRpcError> Error(JsonRpcErrorCodes code, string message = default)
+		protected JsonRpcErrorResponse Error(JsonRpcErrorCodes code, string message = default)
 		{
 			if (String.IsNullOrWhiteSpace(message))
 				throw new ArgumentNullException(nameof(message));
 
-			return new JsonRpcErrorResponse<JsonRpcError>(new JsonRpcError(code, message));
+			return new JsonRpcErrorResponse(new JsonRpcError(code, message));
 		}
 	}
 }
