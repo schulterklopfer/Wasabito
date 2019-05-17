@@ -11,9 +11,11 @@ namespace WalletWasabi.Tests
 		[Fact]
 		public void ParsingRequestTests()
 		{
-			var request = JsonRpcRequest.Parse(
-				"{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": [42, 23], \"id\": 1}");
+			var parsed = JsonRpcRequest.TryParse(
+				"{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": [42, 23], \"id\": 1}",
+				out var request);
 
+			Assert.True(parsed);
 			Assert.Equal("2.0", request.JsonRPC);
 			Assert.Equal("subtract", request.Method);
 			Assert.Equal("1", request.Id);
@@ -21,9 +23,11 @@ namespace WalletWasabi.Tests
 			Assert.Equal(42, (int)request.Parameters[0]);
 			Assert.Equal(23, (int)request.Parameters[1]);
 
-			request = JsonRpcRequest.Parse(
-				"{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": {\"subtrahend\": 23, \"minuend\": 42}, \"id\": 2}");
+			parsed = JsonRpcRequest.TryParse(
+				"{\"jsonrpc\": \"2.0\", \"method\": \"subtract\", \"params\": {\"subtrahend\": 23, \"minuend\": 42}, \"id\": 2}",
+				out request);
 
+			Assert.True(parsed);
 			Assert.Equal("2.0", request.JsonRPC);
 			Assert.Equal("subtract", request.Method);
 			Assert.Equal("2", request.Id);

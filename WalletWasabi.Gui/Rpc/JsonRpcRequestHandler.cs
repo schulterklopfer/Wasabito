@@ -20,27 +20,39 @@ namespace WalletWasabi.Gui.Rpc
 
 		public string Handle(string body)
 		{
-			var jsonRpcRequest = JsonRpcRequest.Parse(body);
+			JsonRpcResponse response = null;
+
+			if(!JsonRpcRequest.TryParse(body, out var jsonRpcRequest))
+			{
+				return Error(JsonRpcErrorCodes.ParseError, null, null);
+			}
 			var methodName = jsonRpcRequest.Method;
 
 			if(!_methodsMap.TryGetValue(methodName, out var map))
 			{
-				throw new Exception($"{methodName} not found!");
+				return Error(JsonRpcErrorCodes.MethodNotFound, $"{methodName} method not found.", jsonRpcRequest.Id);
 			}
 
-			JsonRpcResponse response = null;
-//			try
-//			{
-			var p = jsonRpcRequest.Parameters != null && jsonRpcRequest.Parameters.HasValues 
-				? new object[] { jsonRpcRequest.Parameters }
-				: new object[0];
-			response = (JsonRpcResponse)map.methodInfo.Invoke(_service, p);
-//			}
-//			catch
-//			{
-				// Internal Server Error
-//			}
+			try
+			{
+				var p = jsonRpcRequest.Parameters != null && jsonRpcRequest.Parameters.HasValues 
+					? new object[] { jsonRpcRequest.Parameters }
+					: new object[0];
+				response = (JsonRpcResponse)map.methodInfo.Invoke(_service, p);
+			}
+			catch(Exception)
+			{
+				return Error(JsonRpcErrorCodes.InternalError, null, jsonRpcRequest.Id);
+			}
+			
+			return response.ToJson();
+		}
 
+		private string Error(JsonRpcErrorCodes code, string reason, string id)
+		{
+			var error = new JsonRpcError(code, reason);
+			var response = new JsonRpcErrorResponse(error);
+			response.Id = id;
 			return response.ToJson();
 		}
 

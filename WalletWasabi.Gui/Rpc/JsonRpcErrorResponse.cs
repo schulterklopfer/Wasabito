@@ -2,15 +2,18 @@ using Newtonsoft.Json;
 
 namespace WalletWasabi.Gui.Rpc
 {
-	public class JsonRpcErrorResponse<TError> : JsonRpcResponse 
+	/// <summary>
+	/// Represents the response used to inform about an error situation.
+	/// </summary>
+	public class JsonRpcErrorResponse : JsonRpcResponse 
 	{
-		public JsonRpcErrorResponse(TError result = default) 
+		public JsonRpcErrorResponse(JsonRpcError result) 
 			: base()
 		{
 			Result = result;
 		}
 
 		[JsonProperty("error", Order = 2)]
-		public TError Result { get; }
+		public JsonRpcError Result { get; }
 	}
 }
