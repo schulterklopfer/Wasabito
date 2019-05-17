@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using WalletWasabi.Models;
 using WalletWasabi.Services;
 
@@ -46,8 +47,13 @@ namespace WalletWasabi.Gui.Rpc
 						endpoint = x.Peer.Endpoint.ToString(),
 						userAgent = x.PeerVersion.UserAgent,
 					}).ToArray(),
-					transactionInMempool = Global.WalletService.TransactionCache.Count,
 				});
+		}
+
+		[JsonRpcMethod("stop", "stop wasabi.")]
+		public async Task StopAsync()
+		{
+			await Global.StopAndExitAsync();
 		}
 	}
 }

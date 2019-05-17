@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -18,7 +20,7 @@ namespace WalletWasabi.Gui.Rpc
 			LoadServiceInfo();
 		}
 
-		public string Handle(string body)
+		public async Task<string> HandleAsync(string body)
 		{
 			JsonRpcResponse response = null;
 
@@ -38,14 +40,21 @@ namespace WalletWasabi.Gui.Rpc
 				var p = jsonRpcRequest.Parameters != null && jsonRpcRequest.Parameters.HasValues 
 					? new object[] { jsonRpcRequest.Parameters }
 					: new object[0];
-				response = (JsonRpcResponse)map.methodInfo.Invoke(_service, p);
+				var result = map.methodInfo.Invoke(_service, p);
+				if(!jsonRpcRequest.IsNotification)
+				{
+					response = IsAsync(map.methodInfo)
+						? await (Task<JsonRpcResponse>)result
+						: (JsonRpcResponse)result;
+					response.Id = jsonRpcRequest.Id;
+					return response.ToJson();
+				}
+				return string.Empty;
 			}
 			catch(Exception)
 			{
 				return Error(JsonRpcErrorCodes.InternalError, null, jsonRpcRequest.Id);
 			}
-			
-			return response.ToJson();
 		}
 
 		private string Error(JsonRpcErrorCodes code, string reason, string id)
@@ -69,10 +78,18 @@ namespace WalletWasabi.Gui.Rpc
 					{
 						var jsonRpcMethodAttr = (JsonRpcMethodAttribute) attr;
 						_methodsMap.Add(jsonRpcMethodAttr.Name, (jsonRpcMethodAttr.Name, jsonRpcMethodAttr.Description, methodInfo));
-						Console.WriteLine($"{jsonRpcMethodAttr.Name} was added.");
 					}
 				}
 			}
+		}
+
+		private static bool IsAsync(MethodInfo mi)
+		{
+			Type attType = typeof(AsyncStateMachineAttribute);
+
+			var attrib = (AsyncStateMachineAttribute)mi.GetCustomAttribute(attType);
+
+			return (attrib != null);
 		}
 	}
 }

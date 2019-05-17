@@ -171,18 +171,7 @@ namespace WalletWasabi.Gui
 			#region ProcessKillSubscription
 
 			AppDomain.CurrentDomain.ProcessExit += async (s, e) => await TryDesperateDequeueAllCoinsAsync();
-			Console.CancelKeyPress += async (s, e) =>
-			{
-				e.Cancel = true;
-				Logger.LogWarning("Process was signaled for killing.");
-
-				KillRequested = true;
-				await TryDesperateDequeueAllCoinsAsync();
-				Dispatcher.UIThread.PostLogException(() => Application.Current?.MainWindow?.Close());
-				await DisposeAsync();
-
-				Logger.LogSoftwareStopped("Wasabi");
-			};
+			Console.CancelKeyPress += async (s, e) => { e.Cancel = true; await StopAndExitAsync(); };
 
 			#endregion ProcessKillSubscription
 
@@ -307,6 +296,22 @@ namespace WalletWasabi.Gui
 			#endregion SynchronizerInitialization
 
 			Initialized = true;
+			//RpcServer.Start(); // uncomment this in order to make it work 
+		}
+
+		internal static async Task StopAndExitAsync()
+		{
+			Logger.LogWarning("Process was signaled for killing.", nameof(Global));
+
+			KillRequested = true;
+			await TryDesperateDequeueAllCoinsAsync();
+			Dispatcher.UIThread.PostLogException(() =>
+			{
+				Application.Current?.MainWindow?.Close();
+			});
+			await DisposeAsync();
+
+			Logger.LogInfo($"Wasabi stopped gracefully.", Logger.InstanceGuid.ToString());
 		}
 
 		private async Task<AddressManagerBehavior> InitializeAddressManagerBehaviorAsync()
