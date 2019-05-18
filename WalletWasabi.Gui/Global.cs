@@ -290,13 +290,12 @@ namespace WalletWasabi.Gui
 			Synchronizer.Start(requestInterval, TimeSpan.FromMinutes(5), maxFiltSyncCount);
 			Logger.LogInfo("Start synchronizing filters...");
 
-			RpcServer = new JsonRpcServer();
-			// RpcServer.Start(); // uncomment this in order to make it work 
-
 			#endregion SynchronizerInitialization
 
+			RpcServer = new JsonRpcServer();
+			RpcServer.Start(); // uncomment this in order to make it work 
+
 			Initialized = true;
-			//RpcServer.Start(); // uncomment this in order to make it work 
 		}
 
 		internal static async Task StopAndExitAsync()
@@ -622,6 +621,12 @@ namespace WalletWasabi.Gui
 			try
 			{
 				await DisposeInWalletDependentServicesAsync();
+
+				if (RpcServer != null)
+				{
+					RpcServer.Stop();
+					Logger.LogInfo($"{nameof(RpcServer)} is stopped.", nameof(Global));
+				}
 
 				if (UpdateChecker != null)
 				{
