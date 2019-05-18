@@ -40,16 +40,15 @@ namespace WalletWasabi.Gui.Rpc
 		}
 
 		/// <summary>
-		/// If the request does NOT cointain an **Id** that means the client
-		/// is NOT interested in receiving a response from the server. This
-		/// requests are known as **Notifications**.
+		/// Requests with null Id are called notification requests and indicate the
+		/// client is not interested in receiving a response.
 		/// </summary>
 		public bool IsNotification => Id == null;
 
 		/// <summary>
 		/// A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
 		/// </summary>
-		[JsonProperty("jsonrpc", Order = 1, Required = Required.Always)]
+		[JsonProperty("jsonrpc", Required = Required.Always)]
 		public string JsonRPC { get; }
 
 		/// <summary>
@@ -83,10 +82,5 @@ namespace WalletWasabi.Gui.Rpc
 		/// </summary>
 		[JsonProperty("params")]
 		public JToken Parameters { get;  }
-
-		/// <summary>
-		/// Requests with null Id are called notification requests and indicate the
-		/// client is not interested in receiving a response.
-		/// </summary>
 	}
 }
