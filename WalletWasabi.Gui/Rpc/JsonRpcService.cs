@@ -18,7 +18,7 @@ namespace WalletWasabi.Gui.Rpc
 			if (String.IsNullOrWhiteSpace(message))
 				throw new ArgumentNullException(nameof(message));
 
-			return new JsonRpcErrorResponse(new JsonRpcError(code, message));
+			return new JsonRpcErrorResponse(code, message);
 		}
 
 

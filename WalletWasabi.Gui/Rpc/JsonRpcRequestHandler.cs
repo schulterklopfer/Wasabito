@@ -55,7 +55,8 @@ namespace WalletWasabi.Gui.Rpc
 						var param = methodParameters[i];
 						if(!jobj.ContainsKey(param.name))
 						{
-							throw new InvalidParameterException($"A value for the '{param.name}' is missing.");
+							return Error(JsonRpcErrorCodes.InvalidParams, 
+								$"A value for the '{param.name}' is missing.", jsonRpcRequest.Id);
 						}
 						parameters.Add( jobj[param.name].ToObject(param.type));
 					}
@@ -70,7 +71,8 @@ namespace WalletWasabi.Gui.Rpc
 				}
 				if (parameters.Count != methodParameters.Count)
 				{
-					throw new InvalidParameterException($"{methodParameters.Count} parameters were expected but {parameters.Count} were received.");
+					return Error(JsonRpcErrorCodes.InvalidParams, 
+						$"{methodParameters.Count} parameters were expected but {parameters.Count} were received.", jsonRpcRequest.Id);
 				}
 				var result =  prodecureMetadata.MethodInfo.Invoke(_service, parameters.ToArray());
 
@@ -85,10 +87,6 @@ namespace WalletWasabi.Gui.Rpc
 				response.Id = jsonRpcRequest.Id;
 				return response.ToJson();
 			}
-			catch(InvalidParameterException e)
-			{
-				return Error(JsonRpcErrorCodes.InvalidParams, e.Message, jsonRpcRequest.Id);
-			}
 			catch(Exception)
 			{
 				return Error(JsonRpcErrorCodes.InternalError, null, jsonRpcRequest.Id);
@@ -97,8 +95,7 @@ namespace WalletWasabi.Gui.Rpc
 
 		private string Error(JsonRpcErrorCodes code, string reason, string id)
 		{
-			var error = new JsonRpcError(code, reason);
-			var response = new JsonRpcErrorResponse(error);
+			var response = new JsonRpcErrorResponse(code, reason);
 			response.Id = id;
 			return response.ToJson();
 		}
