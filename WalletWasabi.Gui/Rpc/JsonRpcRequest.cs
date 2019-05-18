@@ -9,6 +9,10 @@ namespace WalletWasabi.Gui.Rpc
 	/// </summary>
 	public class JsonRpcRequest
 	{
+		/// <summary>
+		/// Parses the json rpc request giving back the deserialized JsonRpcRequest instance.
+		/// Return true if the deserialization was successful, otherwise false.
+		/// </summary>
 		public static bool TryParse(string rawJson, out JsonRpcRequest request)
 		{
 			try
@@ -34,6 +38,13 @@ namespace WalletWasabi.Gui.Rpc
 			Method = method;
 			Parameters = parameters;
 		}
+
+		/// <summary>
+		/// If the request does NOT cointain an **Id** that means the client
+		/// is NOT interested in receiving a response from the server. This
+		/// requests are known as **Notifications**.
+		/// </summary>
+		public bool IsNotification => Id == null;
 
 		/// <summary>
 		/// A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
@@ -77,6 +88,5 @@ namespace WalletWasabi.Gui.Rpc
 		/// Requests with null Id are called notification requests and indicate the
 		/// client is not interested in receiving a response.
 		/// </summary>
-		public bool IsNotification => Id == null;
 	}
 }
