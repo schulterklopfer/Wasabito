@@ -6,8 +6,12 @@ using Newtonsoft.Json.Linq;
 
 namespace WalletWasabi.Gui.Rpc
 {
+	///<summary>
+	/// Represents the collection of metadata needed to execute the remote procedure.
+	///</summary>
 	public class JsonRpcMethodMetadata
 	{
+		// The name of the remote procedure. This is NOT the name of the method to be invoked.
 		public string Name { get; }
 		public string Description { get;}
 		public MethodInfo MethodInfo { get; }

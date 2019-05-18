@@ -10,11 +10,14 @@ using Newtonsoft.Json.Linq;
 
 namespace WalletWasabi.Gui.Rpc
 {
+	///<summary>
+	/// This class coordinates all the major steps in processing the RPC call.
+	/// It parses the json request, parses the parameters, invoke the service
+	/// methods and handles the errors.
+	///</summary>
 	public class JsonRpcRequestHandler
 	{
-		private JsonRpcService _service;
-		private Dictionary<string, (string name, string description, MethodInfo methodInfo)> _methodsMap = 
-				new Dictionary<string, (string name, string description, MethodInfo methodInfo)>();
+		private readonly JsonRpcService _service;
 
 		public JsonRpcRequestHandler(JsonRpcService service)
 		{
@@ -61,6 +64,9 @@ namespace WalletWasabi.Gui.Rpc
 						parameters.Add( jobj[param.name].ToObject(param.type));
 					}
 				}
+
+				// Special case: if there is a missing parameter and the procedure is expecting a CancellationTokenSource
+				// then pass the cts we have. This will allow us to cancel async requests when the server is stopped. 
 				if (parameters.Count == methodParameters.Count -1)
 				{
 					var position = methodParameters.FindIndex(x=>x.type == typeof(CancellationTokenSource));
