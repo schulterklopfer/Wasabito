@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using WalletWasabi.Models;
 using WalletWasabi.Services;
@@ -54,6 +55,17 @@ namespace WalletWasabi.Gui.Rpc
 		public async Task StopAsync()
 		{
 			await Global.StopAndExitAsync();
+		}
+
+		[JsonRpcMethod("help", "Provide help.")]
+		public JsonRpcResponse Help()
+		{
+			var sb = new StringBuilder();
+			foreach(var info in EnumetareServiceInfo(this))
+			{
+				sb.AppendLine($"{info.Name}");
+			}
+			return Result(sb.ToString());
 		}
 	}
 }
