@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -17,10 +19,9 @@ namespace WalletWasabi.Gui.Rpc
 		public JsonRpcRequestHandler(JsonRpcService service)
 		{
 			_service = service;
-			LoadServiceInfo();
 		}
 
-		public async Task<string> HandleAsync(string body)
+		public async Task<string> HandleAsync(string body, CancellationTokenSource cts)
 		{
 			JsonRpcResponse response = null;
 
@@ -30,26 +31,63 @@ namespace WalletWasabi.Gui.Rpc
 			}
 			var methodName = jsonRpcRequest.Method;
 
-			if(!_methodsMap.TryGetValue(methodName, out var map))
+			if(!_service.TryGetMetadata(methodName, out var prodecureMetadata))
 			{
-				return Error(JsonRpcErrorCodes.MethodNotFound, $"{methodName} method not found.", jsonRpcRequest.Id);
+				return Error(JsonRpcErrorCodes.MethodNotFound, $"'{methodName}' method not found.", jsonRpcRequest.Id);
 			}
 
 			try
 			{
-				var p = jsonRpcRequest.Parameters != null && jsonRpcRequest.Parameters.HasValues 
-					? new object[] { jsonRpcRequest.Parameters }
-					: new object[0];
-				var result = map.methodInfo.Invoke(_service, p);
-				if(!jsonRpcRequest.IsNotification)
+				var methodParameters = prodecureMetadata.Parameters;
+				var parameters = new List<object>();
+
+				if (jsonRpcRequest.Parameters is JArray jarr)
 				{
-					response = IsAsync(map.methodInfo)
-						? await (Task<JsonRpcResponse>)result
-						: (JsonRpcResponse)result;
-					response.Id = jsonRpcRequest.Id;
-					return response.ToJson();
+					for (int i = 0; i < methodParameters.Count; i++)
+					{
+						parameters.Add( jarr[i].ToObject(methodParameters[i].type) );
+					}
 				}
-				return string.Empty;
+				else if (jsonRpcRequest.Parameters is JObject jobj)
+				{
+					for (int i = 0; i < methodParameters.Count; i++)
+					{
+						var param = methodParameters[i];
+						if(!jobj.ContainsKey(param.name))
+						{
+							throw new InvalidParameterException($"A value for the '{param.name}' is missing.");
+						}
+						parameters.Add( jobj[param.name].ToObject(param.type));
+					}
+				}
+				if (parameters.Count == methodParameters.Count -1)
+				{
+					var position = methodParameters.FindIndex(x=>x.type == typeof(CancellationTokenSource));
+					if(position > -1)
+					{
+						parameters.Insert(position, cts);
+					}
+				}
+				if (parameters.Count != methodParameters.Count)
+				{
+					throw new InvalidParameterException($"{methodParameters.Count} parameters were expected but {parameters.Count} were received.");
+				}
+				var result =  prodecureMetadata.MethodInfo.Invoke(_service, parameters.ToArray());
+
+				if (jsonRpcRequest.IsNotification) // the client is not interested in getting a response
+				{
+					return string.Empty;
+				}
+
+				response = prodecureMetadata.MethodInfo.IsAsync()
+					? await (Task<JsonRpcResponse>)result
+					: (JsonRpcResponse)result;
+				response.Id = jsonRpcRequest.Id;
+				return response.ToJson();
+			}
+			catch(InvalidParameterException e)
+			{
+				return Error(JsonRpcErrorCodes.InvalidParams, e.Message, jsonRpcRequest.Id);
 			}
 			catch(Exception)
 			{
@@ -64,26 +102,11 @@ namespace WalletWasabi.Gui.Rpc
 			response.Id = id;
 			return response.ToJson();
 		}
+	}
 
-		private void LoadServiceInfo()
-		{
-			var serviceType = _service.GetType();
-			var publicMethods = serviceType.GetMethods();
-			foreach(var methodInfo in publicMethods)
-			{
-				var attrs = methodInfo.GetCustomAttributes();  
-				foreach(Attribute attr in attrs)  
-				{
-					if (attr is JsonRpcMethodAttribute)
-					{
-						var jsonRpcMethodAttr = (JsonRpcMethodAttribute) attr;
-						_methodsMap.Add(jsonRpcMethodAttr.Name, (jsonRpcMethodAttr.Name, jsonRpcMethodAttr.Description, methodInfo));
-					}
-				}
-			}
-		}
-
-		private static bool IsAsync(MethodInfo mi)
+	internal static class MethodInfoExtensions
+	{
+		public static bool IsAsync(this MethodInfo mi)
 		{
 			Type attType = typeof(AsyncStateMachineAttribute);
 
