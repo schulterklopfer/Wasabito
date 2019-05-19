@@ -14,7 +14,7 @@ namespace WalletWasabi.Gui.Rpc
 		private long _running;
 		public bool IsRunning => Interlocked.Read(ref _running) == 1;
 		public bool IsStopping => Interlocked.Read(ref _running) == 2;
-		private CancellationTokenSource cts { get; }
+		private CancellationTokenSource _cts { get; }
 
 		private HttpListener _server;
 		
@@ -23,6 +23,7 @@ namespace WalletWasabi.Gui.Rpc
 			_server = new HttpListener();
 			_server.Prefixes.Add("http://127.0.0.1:18099/");
 			_server.Prefixes.Add("http://localhost:18099/");
+			_cts = new CancellationTokenSource();
 		}
 
 		public void Start()
@@ -47,7 +48,7 @@ namespace WalletWasabi.Gui.Rpc
 						using(var reader = new StreamReader(request.InputStream))
 							body = await reader.ReadToEndAsync();
 
-						var result = await handler.HandleAsync(body, cts);
+						var result = await handler.HandleAsync(body, _cts);
 						
 						if(!string.IsNullOrEmpty(result))
 						{
@@ -69,12 +70,13 @@ namespace WalletWasabi.Gui.Rpc
 		internal void Stop()
 		{
 			Interlocked.CompareExchange(ref _running, 2, 1); // If running, make it stopping.;
-			cts.Cancel();
+			_server.Stop();
+			_cts.Cancel();
 			while (IsStopping)
 			{
 				Task.Delay(50).GetAwaiter().GetResult();
 			}
-			cts.Dispose();
+			_cts.Dispose();
 		}
 	}
 }
