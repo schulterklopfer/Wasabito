@@ -7,10 +7,11 @@ namespace WalletWasabi.Gui.Rpc
 	/// </summary>
 	public class JsonRpcErrorResponse : JsonRpcResponse 
 	{
-		public JsonRpcErrorResponse(JsonRpcErrorCodes code, string message=null) 
+		public JsonRpcErrorResponse(JsonRpcErrorCodes code, string message=null, string id = null) 
 			: base()
 		{
 			Result = new JsonRpcError(code, message);
+			Id = id;
 		}
 
 		[JsonProperty("error", Order = 2)]

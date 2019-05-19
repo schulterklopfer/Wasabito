@@ -31,9 +31,9 @@ namespace WalletWasabi.Gui.Rpc
 		/// Constructor used to deserialize the requests
 		/// </summary>
 		[JsonConstructor]
-		public  JsonRpcRequest(string jsonRpc, string id, string method, JToken parameters)
+		public  JsonRpcRequest(string jsonrpc, string id, string method, JToken parameters)
 		{
-			JsonRPC = jsonRpc;
+			JsonRPC = jsonrpc;
 			Id = id;
 			Method = method;
 			Parameters = parameters;

@@ -30,7 +30,7 @@ namespace WalletWasabi.Gui.Rpc
 
 			if(!JsonRpcRequest.TryParse(body, out var jsonRpcRequest))
 			{
-				return Error(JsonRpcErrorCodes.ParseError, null, null);
+				return new JsonRpcErrorResponse(JsonRpcErrorCodes.ParseError).ToJson();
 			}
 			var methodName = jsonRpcRequest.Method;
 
@@ -46,7 +46,8 @@ namespace WalletWasabi.Gui.Rpc
 
 				if (jsonRpcRequest.Parameters is JArray jarr)
 				{
-					for (int i = 0; i < methodParameters.Count; i++)
+					var count = methodParameters.Count < jarr.Count ? methodParameters.Count : jarr.Count;  
+					for (int i = 0; i < count; i++)
 					{
 						parameters.Add( jarr[i].ToObject(methodParameters[i].type) );
 					}
@@ -90,6 +91,7 @@ namespace WalletWasabi.Gui.Rpc
 				response = prodecureMetadata.MethodInfo.IsAsync()
 					? await (Task<JsonRpcResponse>)result
 					: (JsonRpcResponse)result;
+				response = response ?? new JsonRpcResponse(); // for methdos that return `void`
 				response.Id = jsonRpcRequest.Id;
 				return response.ToJson();
 			}
@@ -101,9 +103,7 @@ namespace WalletWasabi.Gui.Rpc
 
 		private string Error(JsonRpcErrorCodes code, string reason, string id)
 		{
-			var response = new JsonRpcErrorResponse(code, reason);
-			response.Id = id;
-			return response.ToJson();
+			return id == null ? string.Empty : (new JsonRpcErrorResponse(code, reason, id).ToJson());
 		}
 	}
 
