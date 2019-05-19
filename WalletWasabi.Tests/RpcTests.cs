@@ -8,26 +8,26 @@ using Xunit;
 
 namespace WalletWasabi.Tests
 {
-	class TesteableRpcService : JsonRpcService
+	class TesteableRpcService
 	{
 		public void UnpublishedProcedure(){}
 
-		[JsonRpcMethod("say", "repeats what you say.")]
+		[JsonRpcMethod("say")]
 		public string Echo(string text) => text;
 
-		[JsonRpcMethod("substract", "Substracts two numbers.")]
+		[JsonRpcMethod("substract")]
 		public int Substract(int minuend, int subtrahend) => minuend - subtrahend;
 
-		[JsonRpcMethod("substractasync", "Substracts two numbers.")]
+		[JsonRpcMethod("substractasync")]
 		public async Task<int> SubstractAsync(int minuend, int subtrahend) => await Task.FromResult( minuend - subtrahend );
 
-		[JsonRpcMethod("writelog", "Write something in the log file.")]
+		[JsonRpcMethod("writelog")]
 		public void Log(string logEntry){}
 
-		[JsonRpcMethod("fail", "Throws an exception.")]
+		[JsonRpcMethod("fail")]
 		public void Failure() => throw new InvalidOperationException("the error");
 
-		[JsonRpcMethod("format", "Write something in the log file.")]
+		[JsonRpcMethod("format")]
 		public async Task FormatHardDriveAsync(string unit, CancellationTokenSource cts)
 		{ 
 			await Task.FromResult((JsonRpcResponse)null);

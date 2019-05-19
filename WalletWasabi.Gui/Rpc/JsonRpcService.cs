@@ -16,12 +16,17 @@ namespace WalletWasabi.Gui.Rpc
 	/// (using reflection) the methods that have to be invoked and the parameters it
 	/// receives. 
 	///</summary>
-	public abstract class JsonRpcService
+	public class JsonRpcServiceMetadataProvider
 	{
 		/// Keeps the directory of procedures' metadata
 		private Dictionary<string, JsonRpcMethodMetadata> _proceduresDirectory = 
 				new Dictionary<string, JsonRpcMethodMetadata>();
-		
+		private Type _serviceType;
+
+		public JsonRpcServiceMetadataProvider(object service)
+		{
+			_serviceType = service.GetType();
+		}
 
 		/// <summary>
 		/// Tries to return the metadata for a given procedure name. 
@@ -43,16 +48,15 @@ namespace WalletWasabi.Gui.Rpc
 
 		private void LoadServiceMetadata()
 		{
-			foreach(var info in JsonRpcService.EnumetareServiceInfo(this))
+			foreach(var info in EnumetareServiceInfo())
 			{
 				_proceduresDirectory.Add(info.Name, info);
 			}
 		}
 
-		internal static IEnumerable<JsonRpcMethodMetadata> EnumetareServiceInfo(JsonRpcService service)
+		internal IEnumerable<JsonRpcMethodMetadata> EnumetareServiceInfo()
 		{
-			var serviceType = service.GetType();
-			var publicMethods = serviceType.GetMethods();
+			var publicMethods = _serviceType.GetMethods();
 			foreach(var methodInfo in publicMethods)
 			{
 				var attrs = methodInfo.GetCustomAttributes();
@@ -66,11 +70,10 @@ namespace WalletWasabi.Gui.Rpc
 							parameters.Add((p.Name, p.ParameterType));
 						}
 						var jsonRpcMethodAttr = (JsonRpcMethodAttribute) attr;
-						yield return new JsonRpcMethodMetadata(jsonRpcMethodAttr.Name, jsonRpcMethodAttr.Description, methodInfo, parameters);
+						yield return new JsonRpcMethodMetadata(jsonRpcMethodAttr.Name, methodInfo, parameters);
 					}
 				}
 			}
 		}
-
 	}
 }

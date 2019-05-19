@@ -7,9 +7,9 @@ using WalletWasabi.Services;
 
 namespace WalletWasabi.Gui.Rpc
 {
-	public class WasabiJsonRpcService : JsonRpcService
+	public class WasabiJsonRpcService
 	{
-		[JsonRpcMethod("listunspentcoins", "returns the list of all coins in the walet.")]
+		[JsonRpcMethod("listunspentcoins")]
 		public object[] GetUnspentCoinList()
 		{
 			if(Global.WalletService == null)
@@ -29,7 +29,7 @@ namespace WalletWasabi.Gui.Rpc
 				}).ToArray();
 		}
 
-		[JsonRpcMethod("getstatus", "returns the list of all coins in the walet.")]
+		[JsonRpcMethod("getstatus")]
 		public object GetStatus()
 		{
 			var sync = Global.Synchronizer;
@@ -49,21 +49,10 @@ namespace WalletWasabi.Gui.Rpc
 				};
 		}
 
-		[JsonRpcMethod("stop", "stop wasabi.")]
+		[JsonRpcMethod("stop")]
 		public async Task StopAsync()
 		{
 			await Global.StopAndExitAsync();
-		}
-
-		[JsonRpcMethod("help", "Provide help.")]
-		public string Help()
-		{
-			var sb = new StringBuilder();
-			foreach(var info in EnumetareServiceInfo(this))
-			{
-				sb.AppendLine($"{info.Name}");
-			}
-			return sb.ToString();
 		}
 	}
 }

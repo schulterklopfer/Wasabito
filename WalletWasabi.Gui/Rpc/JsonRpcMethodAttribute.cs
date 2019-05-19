@@ -12,11 +12,9 @@ namespace WalletWasabi.Gui.Rpc
 	public class JsonRpcMethodAttribute : Attribute
 	{
 		public string Name { get; } 
-		public string Description { get; }  // This should contain the text for help
-		public JsonRpcMethodAttribute(string name, string description)
+		public JsonRpcMethodAttribute(string name)
 		{
 			Name = name;
-			Description = description;
 		}
 	}
 }
