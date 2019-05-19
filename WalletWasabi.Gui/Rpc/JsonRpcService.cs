@@ -18,26 +18,6 @@ namespace WalletWasabi.Gui.Rpc
 	///</summary>
 	public abstract class JsonRpcService
 	{
-		/// <summary>
-		/// Creates and returns a rpc response to be returned to the client.
-		/// </summary>
-		protected JsonRpcResultResponse<TResult> Result<TResult>(TResult data)
-		{
-			return new JsonRpcResultResponse<TResult>(data);
-		}
-
-		/// <summary>
-		/// Creates and returns a rpc error response to be returned to the client.
-		/// </summary>
-		protected JsonRpcErrorResponse Error(JsonRpcErrorCodes code, string message = default)
-		{
-			if (String.IsNullOrWhiteSpace(message))
-				throw new ArgumentNullException(nameof(message));
-
-			return new JsonRpcErrorResponse(code, message);
-		}
-
-
 		/// Keeps the directory of procedures' metadata
 		private Dictionary<string, JsonRpcMethodMetadata> _proceduresDirectory = 
 				new Dictionary<string, JsonRpcMethodMetadata>();

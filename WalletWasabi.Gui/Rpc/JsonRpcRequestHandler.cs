@@ -26,11 +26,9 @@ namespace WalletWasabi.Gui.Rpc
 
 		public async Task<string> HandleAsync(string body, CancellationTokenSource cts)
 		{
-			JsonRpcResponse response = null;
-
 			if(!JsonRpcRequest.TryParse(body, out var jsonRpcRequest))
 			{
-				return new JsonRpcErrorResponse(JsonRpcErrorCodes.ParseError).ToJson();
+				return JsonRpcResponse.CreateErrorResponse(null, new JsonRpcError(JsonRpcErrorCodes.ParseError)).ToJson();
 			}
 			var methodName = jsonRpcRequest.Method;
 
@@ -88,11 +86,23 @@ namespace WalletWasabi.Gui.Rpc
 					return string.Empty;
 				}
 
-				response = prodecureMetadata.MethodInfo.IsAsync()
-					? await (Task<JsonRpcResponse>)result
-					: (JsonRpcResponse)result;
-				response = response ?? new JsonRpcResponse(); // for methdos that return `void`
-				response.Id = jsonRpcRequest.Id;
+				JsonRpcResponse response = null;
+				if(prodecureMetadata.MethodInfo.IsAsync())
+				{
+					if(!prodecureMetadata.MethodInfo.ReturnType.IsGenericType)
+					{
+						response = JsonRpcResponse.CreateResultResponse(jsonRpcRequest.Id, null);
+					}
+					else
+					{
+						var ret = await (dynamic) result;
+						response = JsonRpcResponse.CreateResultResponse(jsonRpcRequest.Id, ret);
+					}
+				}
+				else
+				{
+					response = JsonRpcResponse.CreateResultResponse(jsonRpcRequest.Id, result);
+				}
 				return response.ToJson();
 			}
 			catch(Exception)
@@ -103,7 +113,10 @@ namespace WalletWasabi.Gui.Rpc
 
 		private string Error(JsonRpcErrorCodes code, string reason, string id)
 		{
-			return id == null ? string.Empty : (new JsonRpcErrorResponse(code, reason, id).ToJson());
+			var response = JsonRpcResponse.CreateErrorResponse(id, new JsonRpcError(code, reason));
+			return id == null 
+				? string.Empty 
+				: response.ToJson();
 		}
 	}
 
