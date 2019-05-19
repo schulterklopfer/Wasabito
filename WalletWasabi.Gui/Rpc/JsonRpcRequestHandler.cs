@@ -105,6 +105,10 @@ namespace WalletWasabi.Gui.Rpc
 				}
 				return response.ToJson();
 			}
+			catch(TargetInvocationException e)
+			{
+				return Error(JsonRpcErrorCodes.InternalError, e.InnerException.Message, jsonRpcRequest.Id);
+			}
 			catch(Exception)
 			{
 				return Error(JsonRpcErrorCodes.InternalError, null, jsonRpcRequest.Id);
