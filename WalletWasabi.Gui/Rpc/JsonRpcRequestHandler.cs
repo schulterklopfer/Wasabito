@@ -28,7 +28,7 @@ namespace WalletWasabi.Gui.Rpc
 		{
 			if(!JsonRpcRequest.TryParse(body, out var jsonRpcRequest))
 			{
-				return JsonRpcResponse.CreateErrorResponse(null, new JsonRpcError(JsonRpcErrorCodes.ParseError)).ToJson();
+				return JsonRpcResponse.CreateErrorResponse(null, JsonRpcErrorCodes.ParseError).ToJson();
 			}
 			var methodName = jsonRpcRequest.Method;
 
@@ -117,7 +117,7 @@ namespace WalletWasabi.Gui.Rpc
 
 		private string Error(JsonRpcErrorCodes code, string reason, string id)
 		{
-			var response = JsonRpcResponse.CreateErrorResponse(id, new JsonRpcError(code, reason));
+			var response = JsonRpcResponse.CreateErrorResponse(id, code, reason);
 			return id == null 
 				? string.Empty 
 				: response.ToJson();

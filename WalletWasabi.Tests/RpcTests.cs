@@ -25,7 +25,7 @@ namespace WalletWasabi.Tests
 		public void Log(string logEntry){}
 
 		[JsonRpcMethod("fail", "Throws an exception.")]
-		public void Failure() => throw new InvalidOperationException();
+		public void Failure() => throw new InvalidOperationException("the error");
 
 		[JsonRpcMethod("format", "Write something in the log file.")]
 		public async Task FormatHardDriveAsync(string unit, CancellationTokenSource cts)
@@ -69,7 +69,7 @@ namespace WalletWasabi.Tests
 			"{\"jsonrpc\":\"2.0\",\"id\":\"2\"}")]		
 		[InlineData( // Valid request but internal server error
 			"{\"jsonrpc\": \"2.0\", \"method\": \"fail\", \"params\": [], \"id\": \"2\"}", 
-			"{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"Internal error\"},\"id\":\"2\"}")]
+			"{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"the error\"},\"id\":\"2\"}")]
 		[InlineData( // Valid request with params by name
 			"{\"jsonrpc\": \"2.0\", \"method\": \"substractasync\", \"params\": {\"minuend\": 42, \"subtrahend\": 23}, \"id\": \"3\"}", 
 			"{\"jsonrpc\":\"2.0\",\"result\":19,\"id\":\"3\"}")]
