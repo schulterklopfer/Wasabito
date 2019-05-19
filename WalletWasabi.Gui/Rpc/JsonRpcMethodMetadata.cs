@@ -13,14 +13,12 @@ namespace WalletWasabi.Gui.Rpc
 	{
 		// The name of the remote procedure. This is NOT the name of the method to be invoked.
 		public string Name { get; }
-		public string Description { get;}
 		public MethodInfo MethodInfo { get; }
 		public List<(string name, Type type)> Parameters { get; }
 
-		public JsonRpcMethodMetadata(string name, string description, MethodInfo mi, List<(string name, Type type)> parameters)
+		public JsonRpcMethodMetadata(string name, MethodInfo mi, List<(string name, Type type)> parameters)
 		{
 			Name = name;
-			Description = description;
 			MethodInfo = mi;
 			Parameters = parameters;
 		}

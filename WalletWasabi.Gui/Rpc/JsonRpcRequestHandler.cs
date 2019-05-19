@@ -17,11 +17,13 @@ namespace WalletWasabi.Gui.Rpc
 	///</summary>
 	public class JsonRpcRequestHandler
 	{
-		private readonly JsonRpcService _service;
+		private readonly object _service;
+		private readonly JsonRpcServiceMetadataProvider _metadataProvider;
 
-		public JsonRpcRequestHandler(JsonRpcService service)
+		public JsonRpcRequestHandler(object service)
 		{
 			_service = service;
+			_metadataProvider = new JsonRpcServiceMetadataProvider(_service);
 		}
 
 		public async Task<string> HandleAsync(string body, CancellationTokenSource cts)
@@ -32,7 +34,7 @@ namespace WalletWasabi.Gui.Rpc
 			}
 			var methodName = jsonRpcRequest.Method;
 
-			if(!_service.TryGetMetadata(methodName, out var prodecureMetadata))
+			if(!_metadataProvider.TryGetMetadata(methodName, out var prodecureMetadata))
 			{
 				return Error(JsonRpcErrorCodes.MethodNotFound, $"'{methodName}' method not found.", jsonRpcRequest.Id);
 			}
