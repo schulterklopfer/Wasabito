@@ -67,7 +67,10 @@ namespace WalletWasabi.Gui.Rpc
 			return new {
 					torStatus = sync.TorStatus == TorStatus.NotRunning ? "Not running" : (sync.TorStatus == TorStatus.Running ? "Running" : "Turned off"), 
 					backendStatus = sync.BackendStatus == BackendStatus.Connected ? "Connected" : "Disconnected",
-					bestBlockchainHeight   = sync.BestBlockchainHeight, 
+					bestBlockchainHeight = sync.BitcoinStore.HashChain.TipHeight.ToString(),
+					bestBlockchainHash   = sync.BitcoinStore.HashChain.TipHash.ToString(),
+					filtersCount = sync.BitcoinStore.HashChain.HashCount,
+					filtersLeft = sync.BitcoinStore.HashChain.HashesLeft,
 					network = sync.Network.Name, 
 					exchangeRate = sync.UsdExchangeRate,
 					peers = Global.Nodes.ConnectedNodes.Select(x=> new {
