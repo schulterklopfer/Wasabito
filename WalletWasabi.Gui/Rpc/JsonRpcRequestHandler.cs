@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using WalletWasabi.JsonConverters;
 
 namespace WalletWasabi.Gui.Rpc
 {
@@ -17,6 +18,20 @@ namespace WalletWasabi.Gui.Rpc
 	///</summary>
 	public class JsonRpcRequestHandler
 	{
+		private static JsonSerializerSettings DefaultSettings = new JsonSerializerSettings
+		{
+			NullValueHandling = NullValueHandling.Ignore,
+			DefaultValueHandling = DefaultValueHandling.Ignore,
+			ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+			Converters = new JsonConverter[] { 
+				new Uint256JsonConverter(), 
+				new OutPointJsonConverter(),
+				new BitcoinAddressJsonConverter() 
+			}
+		};
+
+		private static JsonSerializer DefaultSerializer = JsonSerializer.Create(DefaultSettings);
+
 		private readonly object _service;
 		private readonly JsonRpcServiceMetadataProvider _metadataProvider;
 
@@ -49,7 +64,7 @@ namespace WalletWasabi.Gui.Rpc
 					var count = methodParameters.Count < jarr.Count ? methodParameters.Count : jarr.Count;  
 					for (int i = 0; i < count; i++)
 					{
-						parameters.Add( jarr[i].ToObject(methodParameters[i].type) );
+						parameters.Add( jarr[i].ToObject(methodParameters[i].type, DefaultSerializer) );
 					}
 				}
 				else if (jsonRpcRequest.Parameters is JObject jobj)
@@ -62,7 +77,7 @@ namespace WalletWasabi.Gui.Rpc
 							return Error(JsonRpcErrorCodes.InvalidParams, 
 								$"A value for the '{param.name}' is missing.", jsonRpcRequest.Id);
 						}
-						parameters.Add( jobj[param.name].ToObject(param.type));
+						parameters.Add( jobj[param.name].ToObject(param.type, DefaultSerializer));
 					}
 				}
 
@@ -93,6 +108,7 @@ namespace WalletWasabi.Gui.Rpc
 				{
 					if(!prodecureMetadata.MethodInfo.ReturnType.IsGenericType)
 					{
+						await (Task)result;
 						response = JsonRpcResponse.CreateResultResponse(jsonRpcRequest.Id, null);
 					}
 					else
