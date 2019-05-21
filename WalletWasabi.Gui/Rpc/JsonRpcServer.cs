@@ -60,13 +60,14 @@ namespace WalletWasabi.Gui.Rpc
 								var output = response.OutputStream;
 								var buffer = Encoding.UTF8.GetBytes(result);
 								await output.WriteAsync(buffer, 0, buffer.Length);
+								await output.FlushAsync();
 							}
 						}
 						else
 						{
 							response.StatusCode = 503; // Service unavailable
 						}
-						context.Response.Close();
+						response.Close();
 					}
 				}
 				finally
