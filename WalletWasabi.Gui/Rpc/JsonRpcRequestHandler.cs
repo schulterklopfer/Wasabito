@@ -21,7 +21,6 @@ namespace WalletWasabi.Gui.Rpc
 		private static JsonSerializerSettings DefaultSettings = new JsonSerializerSettings
 		{
 			NullValueHandling = NullValueHandling.Ignore,
-			DefaultValueHandling = DefaultValueHandling.Ignore,
 			ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
 			Converters = new JsonConverter[] { 
 				new Uint256JsonConverter(), 
@@ -45,7 +44,7 @@ namespace WalletWasabi.Gui.Rpc
 		{
 			if(!JsonRpcRequest.TryParse(body, out var jsonRpcRequest))
 			{
-				return JsonRpcResponse.CreateErrorResponse(null, JsonRpcErrorCodes.ParseError).ToJson();
+				return JsonRpcResponse.CreateErrorResponse(null, JsonRpcErrorCodes.ParseError).ToJson(DefaultSettings);
 			}
 			var methodName = jsonRpcRequest.Method;
 
@@ -121,7 +120,7 @@ namespace WalletWasabi.Gui.Rpc
 				{
 					response = JsonRpcResponse.CreateResultResponse(jsonRpcRequest.Id, result);
 				}
-				return response.ToJson();
+				return response.ToJson(DefaultSettings);
 			}
 			catch(TargetInvocationException e)
 			{
@@ -138,7 +137,7 @@ namespace WalletWasabi.Gui.Rpc
 			var response = JsonRpcResponse.CreateErrorResponse(id, code, reason);
 			return id == null 
 				? string.Empty 
-				: response.ToJson();
+				: response.ToJson(DefaultSettings);
 		}
 	}
 }

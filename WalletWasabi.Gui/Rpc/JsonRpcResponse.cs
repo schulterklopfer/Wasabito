@@ -64,14 +64,9 @@ namespace WalletWasabi.Gui.Rpc
 			return "Server error";
 		}
 
-		public string ToJson()
+		public string ToJson(JsonSerializerSettings serializerSettings)
 		{
-			var settings = new JsonSerializerSettings()
-			{
-				NullValueHandling = NullValueHandling.Ignore
-			};
-
-			return JsonConvert.SerializeObject(this, settings);
+			return JsonConvert.SerializeObject(this, serializerSettings);
 		}
 	}
 }
