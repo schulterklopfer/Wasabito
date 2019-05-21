@@ -145,6 +145,11 @@ namespace WalletWasabi.Gui
 
 		public ServiceConfiguration ServiceConfiguration { get; private set; }
 
+		[JsonProperty(PropertyName = "JsonRpcServerEnabled")]
+		public bool? JsonRpcServerEnabled { get; internal set; }
+		[JsonProperty(PropertyName = "JsonRpcServerPort")]
+		public int? JsonRpcServerPort { get; internal set; }
+
 		public Uri GetCurrentBackendUri()
 		{
 			if (TorProcessManager.RequestFallbackAddressUsage)
@@ -284,7 +289,10 @@ namespace WalletWasabi.Gui
 			int? privacyLevelSome,
 			int? privacyLevelFine,
 			int? privacyLevelStrong,
-			Money dustThreshold)
+			Money dustThreshold
+			bool? jsonRpcServerEnabled,
+			int? jsonRpcServerPort
+			)
 		{
 			Network = Guard.NotNull(nameof(network), network);
 
@@ -312,6 +320,9 @@ namespace WalletWasabi.Gui
 			PrivacyLevelStrong = Guard.NotNull(nameof(privacyLevelStrong), privacyLevelStrong);
 
 			DustThreshold = Guard.NotNull(nameof(dustThreshold), dustThreshold);
+
+			JsonRpcServerEnabled = Guard.NotNull(nameof(jsonRpcServerEnabled), jsonRpcServerEnabled);
+			JsonRpcServerPort = Guard.NotNull(nameof(jsonRpcServerPort), jsonRpcServerPort);
 
 			ServiceConfiguration = new ServiceConfiguration(MixUntilAnonymitySet.Value, PrivacyLevelSome.Value, PrivacyLevelFine.Value, PrivacyLevelStrong.Value, GetBitcoinCoreEndPoint(), DustThreshold);
 		}
@@ -356,6 +367,9 @@ namespace WalletWasabi.Gui
 			PrivacyLevelFine = 21;
 			PrivacyLevelStrong = 50;
 			DustThreshold = Money.Coins(0.0001m);
+
+			JsonRpcServerEnabled = false;
+			JsonRpcServerPort = 18099;
 
 			if (!File.Exists(FilePath))
 			{
@@ -406,6 +420,9 @@ namespace WalletWasabi.Gui
 			DustThreshold = config.DustThreshold ?? DustThreshold;
 
 			ServiceConfiguration = config.ServiceConfiguration ?? ServiceConfiguration;
+
+			JsonRpcServerEnabled = config.JsonRpcServerEnabled ?? JsonRpcServerEnabled;
+			JsonRpcServerPort = config.JsonRpcServerPort ?? JsonRpcServerPort;
 
 			// Just debug convenience.
 			_backendUri = GetCurrentBackendUri();
@@ -502,6 +519,14 @@ namespace WalletWasabi.Gui
 				return true;
 			}
 			if (PrivacyLevelStrong != config.PrivacyLevelStrong)
+			{
+				return true;
+			}
+			if (JsonRpcServerEnabled != config.JsonRpcServerEnabled)
+			{
+				return true;
+			}
+			if (JsonRpcServerPort != config.JsonRpcServerPort)
 			{
 				return true;
 			}
