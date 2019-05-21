@@ -2,6 +2,7 @@ using Avalonia.Threading;
 using AvalonStudio.Extensibility;
 using AvalonStudio.Shell;
 using NBitcoin.Protocol;
+using Nito.AsyncEx;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
@@ -13,11 +14,14 @@ using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using WalletWasabi.Gui.Converters;
 using WalletWasabi.Gui.Dialogs;
+using WalletWasabi.Gui.Models;
 using WalletWasabi.Gui.Tabs;
 using WalletWasabi.Helpers;
 using WalletWasabi.Models;
 using WalletWasabi.Services;
+using WalletWasabi.Stores;
 
 namespace WalletWasabi.Gui.ViewModels
 {
@@ -31,10 +35,12 @@ namespace WalletWasabi.Gui.ViewModels
 	public class StatusBarViewModel : ViewModelBase
 	{
 		private CompositeDisposable Disposables { get; } = new CompositeDisposable();
-		private NodesCollection Nodes { get; }
-		private WasabiSynchronizer Synchronizer { get; }
+		private AsyncLock StatusTextAnimationLock { get; set; }
+		private NodesCollection Nodes { get; set; }
+		private WasabiSynchronizer Synchronizer { get; set; }
+		private HashChain HashChain { get; set; }
 
-		private bool UseTor { get; }
+		private bool UseTor { get; set; }
 
 		private UpdateStatus _updateStatus;
 		private bool _updateAvailable;
@@ -45,15 +51,67 @@ namespace WalletWasabi.Gui.ViewModels
 		private int _filtersLeft;
 		private int _blocksLeft;
 		private string _btcPrice;
-		private string _status;
+		private StatusBarStatus _status;
+		private string _statusText;
 
-		public StatusBarViewModel(NodesCollection nodes, WasabiSynchronizer synchronizer, UpdateChecker updateChecker)
+		public StatusBarViewModel()
 		{
 			UpdateStatus = UpdateStatus.Latest;
+			UpdateAvailable = false;
+			CriticalUpdateAvailable = false;
+			Backend = BackendStatus.NotConnected;
+			UseTor = false;
+			Tor = TorStatus.NotRunning;
+			Peers = 0;
+			FiltersLeft = 0;
+			BlocksLeft = 0;
+			BtcPrice = "$0";
+			StatusText = "";
+
+			StatusTextAnimationLock = new AsyncLock();
+
+			this.WhenAnyValue(x => x.Status).Subscribe(status =>
+
+			{
+				StatusText = StatusBarStatusStringConverter.Convert(status);
+			});
+
+			this.WhenAnyValue(x => x.StatusText).Subscribe(async status =>
+			{
+				using (await StatusTextAnimationLock.LockAsync()) // Without this lock the status get stuck once in a while.
+				{
+					if (status.EndsWith(".")) // Then do animation.
+					{
+						string nextAnimation = null;
+						if (status.EndsWith("..."))
+						{
+							nextAnimation = status.TrimEnd("..", StringComparison.Ordinal);
+						}
+						else if (status.EndsWith("."))
+						{
+							nextAnimation = $"{status}.";
+						}
+
+						if (nextAnimation != null)
+						{
+							await Task.Delay(1000);
+							if (StatusText == status) // If still the same.
+							{
+								StatusText = nextAnimation;
+							}
+						}
+					}
+				}
+			});
+
+			Status = StatusBarStatus.Loading;
+		}
+
+		public void Initialize(NodesCollection nodes, WasabiSynchronizer synchronizer, UpdateChecker updateChecker)
+		{
 			Nodes = nodes;
 			Synchronizer = synchronizer;
-			BlocksLeft = 0;
-			FiltersLeft = synchronizer.GetFiltersLeft();
+			HashChain = synchronizer.BitcoinStore.HashChain;
 			UseTor = Global.Config.UseTor.Value; // Don't make it dynamic, because if you change this config settings only next time will it activate.
 
 			Observable.FromEventPattern<NodeEventArgs>(nodes, nameof(nodes.Added))
@@ -76,33 +134,28 @@ namespace WalletWasabi.Gui.ViewModels
 					BlocksLeft = x.EventArgs;
 				}).DisposeWith(Disposables);
 
-			Observable.FromEventPattern(synchronizer, nameof(synchronizer.NewFilter)).Subscribe(x =>
-			{
-				FiltersLeft = Synchronizer.GetFiltersLeft();
-			}).DisposeWith(Disposables);
-
-			synchronizer.WhenAnyValue(x => x.TorStatus).Subscribe(status =>
+			Synchronizer.WhenAnyValue(x => x.TorStatus).Subscribe(status =>
 			{
 				SetTor(status);
 				SetPeers(Nodes.Count);
 			}).DisposeWith(Disposables);
 
-			synchronizer.WhenAnyValue(x => x.BackendStatus).Subscribe(_ =>
+			Synchronizer.WhenAnyValue(x => x.BackendStatus).Subscribe(_ =>
 			{
 				Backend = Synchronizer.BackendStatus;
 			}).DisposeWith(Disposables);
 
-			synchronizer.WhenAnyValue(x => x.BestBlockchainHeight).Subscribe(_ =>
+			HashChain.WhenAnyValue(x => x.HashesLeft).Subscribe(x =>
 			{
-				FiltersLeft = Synchronizer.GetFiltersLeft();
+				FiltersLeft = x;
 			}).DisposeWith(Disposables);
 
-			synchronizer.WhenAnyValue(x => x.UsdExchangeRate).Subscribe(usd =>
+			Synchronizer.WhenAnyValue(x => x.UsdExchangeRate).Subscribe(usd =>
 			{
 				BtcPrice = $"${(long)usd}";
 			}).DisposeWith(Disposables);
 
-			Observable.FromEventPattern<bool>(synchronizer, nameof(synchronizer.ResponseArrivedIsGenSocksServFail))
+			Observable.FromEventPattern<bool>(Synchronizer, nameof(Synchronizer.ResponseArrivedIsGenSocksServFail))
 				.Subscribe(e =>
 				{
 					OnResponseArrivedIsGenSocksServFail(e.EventArgs);
@@ -138,31 +191,6 @@ namespace WalletWasabi.Gui.ViewModels
 				RefreshStatus();
 			});
 
-			this.WhenAnyValue(x => x.Status).Subscribe(async status =>
-			{
-				if (status.EndsWith(".")) // Then do animation.
-				{
-					string nextAnimation = null;
-					if (status.EndsWith("..."))
-					{
-						nextAnimation = status.TrimEnd("..", StringComparison.Ordinal);
-					}
-					else if (status.EndsWith("..") || status.EndsWith("."))
-					{
-						nextAnimation = $"{status}.";
-					}
-
-					if (nextAnimation != null)
-					{
-						await Task.Delay(1000);
-						if (Status == status) // If still the same.
-						{
-							Status = nextAnimation;
-						}
-					}
-				}
-			});
-
 			UpdateCommand = ReactiveCommand.Create(() =>
 			{
 				try
@@ -192,7 +220,7 @@ namespace WalletWasabi.Gui.ViewModels
 				});
 		}
 
-		public ReactiveCommand<Unit, Unit> UpdateCommand { get; }
+		public ReactiveCommand<Unit, Unit> UpdateCommand { get; set; }
 
 		public UpdateStatus UpdateStatus
 		{
@@ -261,10 +289,17 @@ namespace WalletWasabi.Gui.ViewModels
 			set => this.RaiseAndSetIfChanged(ref _btcPrice, value);
 		}
 
-		public string Status
+		public StatusBarStatus Status
 		{
 			get => _status;
 			set => this.RaiseAndSetIfChanged(ref _status, value);
+		}
+
+		public string StatusText
+		{
+			get => _statusText;
+
+			set => this.RaiseAndSetIfChanged(ref _statusText, value);
 		}
 
 		private void OnResponseArrivedIsGenSocksServFail(bool isGenSocksServFail)
@@ -309,19 +344,14 @@ namespace WalletWasabi.Gui.ViewModels
 			}
 		}
 
-		private List<string> StatusQueue { get; } = new List<string>();
+		private List<StatusBarStatus> StatusQueue { get; } = new List<StatusBarStatus>();
+
 		private object StatusQueueLock { get; } = new object();
 
-		public void TryAddStatus(string status)
+		public void TryAddStatus(StatusBarStatus status)
 		{
 			try
 			{
-				status = Guard.Correct(status);
-				if (status == "")
-				{
-					return;
-				}
-
 				lock (StatusQueueLock)
 				{
 					// Make sure it's the last status.
@@ -336,20 +366,14 @@ namespace WalletWasabi.Gui.ViewModels
 			}
 		}
 
-		public void TryRemoveStatus(params string[] statuses)
+		public void TryRemoveStatus(params StatusBarStatus[] statuses)
 		{
 			try
 			{
 				lock (StatusQueueLock)
 				{
-					foreach (var statusRaw in statuses)
+					foreach (StatusBarStatus status in statuses)
 					{
-						var status = Guard.Correct(statusRaw);
-						if (status == "")
-						{
-							return;
-						}
-
 						if (StatusQueue.Remove(status))
 						{
 							RefreshStatusNoLock();
@@ -367,7 +391,7 @@ namespace WalletWasabi.Gui.ViewModels
 		{
 			lock (StatusQueueLock)
 			{
-				if (!SetPriorityStatus())
+				if (!TrySetPriorityStatus())
 				{
 					SetCustomStatusOrReady();
 				}
@@ -376,7 +400,7 @@ namespace WalletWasabi.Gui.ViewModels
 
 		private void RefreshStatusNoLock()
 		{
-			if (!SetPriorityStatus())
+			if (!TrySetPriorityStatus())
 			{
 				SetCustomStatusOrReady();
 			}
@@ -384,34 +408,33 @@ namespace WalletWasabi.Gui.ViewModels
 
 		private void SetCustomStatusOrReady()
 		{
-			var status = StatusQueue.LastOrDefault();
-			if (status is null)
+			if (StatusQueue.Any())
 			{
-				Status = "Ready";
+				Status = StatusQueue.Last();
 			}
 			else
 			{
-				Status = status;
+				Status = StatusBarStatus.Ready;
 			}
 		}
 
-		private bool SetPriorityStatus()
+		private bool TrySetPriorityStatus()
 		{
 			if (UpdateStatus == UpdateStatus.Critical)
 			{
-				Status = "THE BACKEND WAS UPGRADED WITH BREAKING CHANGES - PLEASE UPDATE YOUR SOFTWARE";
+				Status = StatusBarStatus.CriticalUpdate;
 			}
 			else if (UpdateStatus == UpdateStatus.Optional)
 			{
-				Status = "New Version Is Available";
+				Status = StatusBarStatus.OptionalUpdate;
 			}
 			else if (Tor == TorStatus.NotRunning || Backend != BackendStatus.Connected || Peers < 1)
 			{
-				Status = "Connecting...";
+				Status = StatusBarStatus.Connecting;
 			}
 			else if (FiltersLeft != 0 || BlocksLeft != 0)
 			{
-				Status = "Synchronizing...";
+				Status = StatusBarStatus.Synchronizing;
 			}
 			else
 			{
@@ -450,7 +473,6 @@ namespace WalletWasabi.Gui.ViewModels
 			}
 		}
 
-		// This code added to correctly implement the disposable pattern.
 		public void Dispose()
 		{
 			// Do not change this code. Put cleanup code in Dispose(bool disposing) above.

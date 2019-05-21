@@ -198,13 +198,10 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			BuildTransactionCommand = ReactiveCommand.CreateFromTask(async () =>
 			{
-				const string buildingTransactionStatusText = "Building transaction...";
-				const string signingTransactionStatusText = "Signing transaction...";
-				const string broadcastingTransactionStatusText = "Broadcasting transaction...";
 				try
 				{
 					IsBusy = true;
-					MainWindowViewModel.Instance.StatusBar.TryAddStatus(buildingTransactionStatusText);
+					MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.BuildingTransaction);
 
 					Password = Guard.Correct(Password);
 					Label = Label.Trim(',', ' ').Trim();
@@ -253,10 +250,9 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					var label = Label;
 					var operation = new WalletService.Operation(script, amount, label);
 
-					const string dequeuingSelectedCoinsStatusText = "Dequeueing selected coins...";
 					try
 					{
-						MainWindowViewModel.Instance.StatusBar.TryAddStatus(dequeuingSelectedCoinsStatusText);
+						MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.DequeuingSelectedCoins);
 						TxoRef[] toDequeue = selectedCoinViewModels.Where(x => x.CoinJoinInProgress).Select(x => x.Model.GetTxoRef()).ToArray();
 						if (toDequeue != null && toDequeue.Any())
 						{
@@ -270,7 +266,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					}
 					finally
 					{
-						MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(dequeuingSelectedCoinsStatusText);
+						MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(StatusBarStatus.DequeuingSelectedCoins);
 					}
 
 					var result = await Task.Run(() => Global.WalletService.BuildTransaction(Password, new[] { operation }, FeeTarget, allowUnconfirmed: true, allowedInputs: selectedCoinReferences));
@@ -291,53 +287,57 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 						return;
 					}
 
-					MainWindowViewModel.Instance.StatusBar.TryAddStatus(signingTransactionStatusText);
+					MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.SigningTransaction);
 					SmartTransaction signedTransaction = result.Transaction;
 
 					if (IsHardwareWallet && !result.Signed) // If hardware but still has a privkey then it's password, then meh.
 					{
-						const string connectingToHardwareWalletStatusText = "Connecting to hardware wallet...";
-						const string acquiringSignatureFromHardwareWalletStatusText = "Acquiring signature from hardware wallet...";
 						PSBT signedPsbt = null;
 						try
 						{
 							IsHardwareBusy = true;
-							MainWindowViewModel.Instance.StatusBar.TryAddStatus(connectingToHardwareWalletStatusText);
+							MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.ConnectingToHardwareWallet);
 							// If we have no hardware wallet info then try refresh it. If we failed, then tha's a problem.
-							if (KeyManager.HardwareWalletInfo is null && !await TryRefreshHardwareWalletInfoAsync(KeyManager))
+							if (KeyManager.HardwareWalletInfo is null)
 							{
-								SetWarningMessage("Could not find hardware wallet. Make sure it's plugged in and you're logged in with your PIN.");
-								return;
+								var refRes = await TryRefreshHardwareWalletInfoAsync(KeyManager);
+								if (!refRes.success)
+								{
+									SetWarningMessage(refRes.error);
+									return;
+								}
 							}
 
-							MainWindowViewModel.Instance.StatusBar.TryAddStatus(acquiringSignatureFromHardwareWalletStatusText);
+							MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.AcquiringSignatureFromHardwareWallet);
 							signedPsbt = await HwiProcessManager.SignTxAsync(KeyManager.HardwareWalletInfo, result.Psbt);
 						}
 						catch (IOException ex) when (ex.Message.Contains("device not found", StringComparison.OrdinalIgnoreCase)
 													|| ex.Message.Contains("Invalid status 6f04", StringComparison.OrdinalIgnoreCase) // It comes when device asleep too.
-													|| ex.Message.Contains("Device is asleep", StringComparison.OrdinalIgnoreCase))
+													|| ex.Message.Contains("Device is asleep", StringComparison.OrdinalIgnoreCase)
+													|| ex.Message.Contains("promptpin", StringComparison.OrdinalIgnoreCase))
 						{
-							MainWindowViewModel.Instance.StatusBar.TryAddStatus(connectingToHardwareWalletStatusText);
+							MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.ConnectingToHardwareWallet);
 							// The user may changed USB port. Try again with new enumeration.
-							if (!await TryRefreshHardwareWalletInfoAsync(KeyManager))
+							var refRes = await TryRefreshHardwareWalletInfoAsync(KeyManager);
+							if (!refRes.success)
 							{
-								SetWarningMessage("Could not find hardware wallet. Make sure it's plugged in and you're logged in with your PIN.");
+								SetWarningMessage(refRes.error);
 								return;
 							}
 
-							MainWindowViewModel.Instance.StatusBar.TryAddStatus(acquiringSignatureFromHardwareWalletStatusText);
+							MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.AcquiringSignatureFromHardwareWallet);
 							signedPsbt = await HwiProcessManager.SignTxAsync(KeyManager.HardwareWalletInfo, result.Psbt);
 						}
 						finally
 						{
-							MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(connectingToHardwareWalletStatusText, acquiringSignatureFromHardwareWalletStatusText);
+							MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(StatusBarStatus.ConnectingToHardwareWallet, StatusBarStatus.AcquiringSignatureFromHardwareWallet);
 							IsHardwareBusy = false;
 						}
 
 						signedTransaction = signedPsbt.ExtractSmartTransaction(result.Transaction.Height);
 					}
 
-					MainWindowViewModel.Instance.StatusBar.TryAddStatus(broadcastingTransactionStatusText);
+					MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusBarStatus.BroadcastingTransaction);
 					await Task.Run(async () => await Global.WalletService.SendTransactionAsync(signedTransaction));
 
 					TryResetInputsOnSuccess("Transaction is successfully sent!");
@@ -353,7 +353,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				}
 				finally
 				{
-					MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(buildingTransactionStatusText, signingTransactionStatusText, broadcastingTransactionStatusText);
+					MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(StatusBarStatus.BuildingTransaction, StatusBarStatus.SigningTransaction, StatusBarStatus.BroadcastingTransaction);
 					IsBusy = false;
 				}
 			},
@@ -361,7 +361,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				(isMax, amount, address, busy) => (isMax.Value || !string.IsNullOrWhiteSpace(amount.Value)) && !string.IsNullOrWhiteSpace(Address) && !IsBusy));
 		}
 
-		private async Task<bool> TryRefreshHardwareWalletInfoAsync(KeyManager keyManager)
+		private async Task<(bool success, string error)> TryRefreshHardwareWalletInfoAsync(KeyManager keyManager)
 		{
 			var hwis = await HwiProcessManager.EnumerateAsync();
 
@@ -373,11 +373,75 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			var fingerprint = keyManager.MasterFingerprint;
 
-			if (fingerprint is null) return false;
+			if (fingerprint is null) return (false, "This wallet is a watch-only wallet.");
 
 			keyManager.HardwareWalletInfo = hwis.FirstOrDefault(x => x.MasterFingerprint == fingerprint);
 
-			return keyManager.HardwareWalletInfo != null;
+			if (keyManager.HardwareWalletInfo is null)
+			{
+				var needsPinWalletInfo = hwis.FirstOrDefault(x => x.NeedPin);
+
+				if (needsPinWalletInfo != null)
+				{
+					if (!await HwiProcessManager.PromptPinAsync(needsPinWalletInfo))
+					{
+						return (false, "promptpin request failed.");
+					}
+
+					PinPadViewModel pinpad = IoC.Get<IShell>().Documents.OfType<PinPadViewModel>().FirstOrDefault();
+					if (pinpad is null)
+					{
+						pinpad = new PinPadViewModel(null);
+						IoC.Get<IShell>().AddOrSelectDocument(pinpad);
+					}
+					var result = await pinpad.ShowDialogAsync();
+					DisplayActionTab();
+					if (!(result is true))
+					{
+						return (false, "PIN wasn't provided.");
+					}
+
+					var maskedPin = pinpad.MaskedPin;
+					if (!await HwiProcessManager.SendPinAsync(needsPinWalletInfo, maskedPin))
+					{
+						return (false, "Wrong PIN.");
+					}
+					var p = needsPinWalletInfo.Path;
+					var t = needsPinWalletInfo.Type;
+					var enumRes = await HwiProcessManager.EnumerateAsync();
+					needsPinWalletInfo = enumRes.FirstOrDefault(x => x.Type == t && x.Path == p);
+					if (needsPinWalletInfo is null)
+					{
+						return (false, "Couldn't find the hardware wallet you are working with. Did you disconnect it?");
+					}
+					else
+					{
+						keyManager.HardwareWalletInfo = needsPinWalletInfo;
+					}
+
+					if (!keyManager.HardwareWalletInfo.Initialized)
+					{
+						return (false, "Hardware wallet is not initialized.");
+					}
+					if (!keyManager.HardwareWalletInfo.Ready)
+					{
+						return (false, "Hardware wallet is not ready.");
+					}
+					if (keyManager.HardwareWalletInfo.NeedPin)
+					{
+						return (false, "Hardware wallet still needs a PIN.");
+					}
+				}
+			}
+
+			if (keyManager.HardwareWalletInfo is null)
+			{
+				return (false, "Could not find hardware wallet. Make sure it's plugged in and you're logged in with your PIN.");
+			}
+			else
+			{
+				return (true, null);
+			}
 		}
 
 		private void SetSendText()
