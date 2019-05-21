@@ -33,19 +33,22 @@ namespace WalletWasabi.Gui.CommandLine
 			Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
 
 			var suite = new CommandSet("wassabee", _output, _error) {
-					"Usage: wassabee [OPTIONS]+",
-					"Launches Wasabi Wallet.",
-					"",
-					{ "v|version", "Displays Wasabi version and exit.",
-						x => showVersion = x != null},
-					{ "d|datadir=", "Directory path where store all the Wasabi data.",
-						x => { 	Global.SetDataDir(x); }},
-					"",
-					"Available commands are:",
-					"",
-					_mixerCommand,
-					_passwordFinderCommand
-				};
+				"Usage: wassabee [OPTIONS]+",
+				"Launches Wasabi Wallet.",
+				"",
+				{ "v|version", "Displays Wasabi version and exit.",
+					x => showVersion = x != null},
+				{ "d|datadir=", "Directory path where store all the Wasabi data.",
+					x => {
+						Global.SetDataDir(x); 
+						Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
+					}},
+				"",
+				"Available commands are:",
+				"",
+				_mixerCommand,
+				_passwordFinderCommand
+			};
 
 			EnsureBackwardCompatibilityWithOldParameters(ref args);
 			var commandProccessed = await suite.RunAsync(args) == 0;
