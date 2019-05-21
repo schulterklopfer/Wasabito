@@ -96,7 +96,6 @@ namespace WalletWasabi.Gui.Rpc
 		public async Task<object> SendTransaction(BitcoinAddress sendto, TxoRef[] coins, long amount, string label, int feeTarget)
 		{
 			AssertWalletIsLoaded();
-
 			var sync = Global.Synchronizer;
 			var operation = new WalletService.Operation(sendto.ScriptPubKey, amount, label);
 			var password = string.Empty;
@@ -113,7 +112,6 @@ namespace WalletWasabi.Gui.Rpc
 				tx = smartTx.Transaction.ToHex()
 			};
 		}
-
 
 		[JsonRpcMethod("stop")]
 		public async Task StopAsync()
