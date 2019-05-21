@@ -10,8 +10,16 @@ Wasabi wallet provides an RPC interface to interact with the wallet programatica
 The RPC server does NOT support batch requests, authentication nor SSL/TLS communication. Requests are served in order one by one in serie (no parallel processing).
 It is intentionally limited to serve to only one whitelisted local address and comes disabled by default.
 
+# Before start (Enable RPC)
+
+The RPC server has to be configured and enabled. This is done in the `Config.json` file and the relevant settings are:
+
+* JsonRpcServerEnabled: [true | fale]   (default: false)
+* JsonRpcServerPort": [port number]     (default: 18099)
+
 
 # Methods available
+
 Current version only handles the following method `listunspentcoins`, `getstatus`, `getwalletinfo`, `getnewaddress`, `send` and `stop`. These can can be tested as follow:
 
 ## getstatus
