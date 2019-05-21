@@ -37,6 +37,9 @@ namespace WalletWasabi.Gui.Rpc
 				extendedAccountZpub = km.ExtPubKey.ToZpub(Global.Network),
 				accountKeyPath = $"m/{km.AccountKeyPath.ToString()}",
 				masterKeyFingerprint = km.MasterFingerprint.ToString(),
+				balance = Global.WalletService.Coins
+							.Where(c => c.Unspent && !c.IsDust && !c.SpentAccordingToBackend)
+							.Sum(c => c.Amount.Satoshi)
 			};
 		}
 
