@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Crypto;
 using WalletWasabi.Gui.Dialogs;
+using WalletWasabi.Gui.Models;
 using WalletWasabi.Gui.Rpc;
 using WalletWasabi.Gui.ViewModels;
 using WalletWasabi.Helpers;
@@ -292,7 +293,7 @@ namespace WalletWasabi.Gui
 
 			#endregion SynchronizerInitialization
 
-			RpcServer = new JsonRpcServer(this);
+			RpcServer = new JsonRpcServer(this, new JsonRpcServerConfiguration(Config));
 			RpcServer.Start(); // uncomment this in order to make it work 
 
 			Initialized = true;

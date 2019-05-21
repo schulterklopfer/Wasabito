@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using WalletWasabi.Gui.Models;
 
 namespace WalletWasabi.Gui.Rpc
 {
@@ -17,13 +18,15 @@ namespace WalletWasabi.Gui.Rpc
 		private CancellationTokenSource _cts { get; }
 
 		private HttpListener _server;
-		private WasabiJsonRpcService _service;
-		
-		public JsonRpcServer(Global global)
+		private WasabiJsonRpcService _service;		
+		private JsonRpcServerConfiguration _config;
+
+		public JsonRpcServer(Global global, JsonRpcServerConfiguration config)
 		{
+			_config = config;
 			_server = new HttpListener();
-			_server.Prefixes.Add("http://127.0.0.1:18099/");
-			_server.Prefixes.Add("http://localhost:18099/");
+			_server.Prefixes.Add($"http://127.0.0.1:{config.Port}/");
+			_server.Prefixes.Add($"http://localhost:{config.Port}/");
 			_cts = new CancellationTokenSource();
 			_service = new WasabiJsonRpcService(global);
 		}
@@ -44,20 +47,26 @@ namespace WalletWasabi.Gui.Rpc
 						var request = context.Request;
 						var response = context.Response;
 
-						//if(request.HttpMethod != "post" || !request.HasEntityBody) // error
-						string body;
-						using(var reader = new StreamReader(request.InputStream))
-							body = await reader.ReadToEndAsync();
-
-						var result = await handler.HandleAsync(body, _cts);
-						
-						if(!string.IsNullOrEmpty(result))
+						if (_config.IsEnabled)
 						{
-							var output = response.OutputStream;
-							var buffer = Encoding.UTF8.GetBytes(result);
-							await output.WriteAsync(buffer, 0, buffer.Length);
-						}
+							string body;
+							using(var reader = new StreamReader(request.InputStream))
+								body = await reader.ReadToEndAsync();
 
+							var result = await handler.HandleAsync(body, _cts);
+							
+							// result is null only when the request is a notification.
+							if(!string.IsNullOrEmpty(result))
+							{
+								var output = response.OutputStream;
+								var buffer = Encoding.UTF8.GetBytes(result);
+								await output.WriteAsync(buffer, 0, buffer.Length);
+							}
+						}
+						else
+						{
+							response.StatusCode = 503; // Service unavailable
+						}
 						context.Response.Close();
 					}
 				}
