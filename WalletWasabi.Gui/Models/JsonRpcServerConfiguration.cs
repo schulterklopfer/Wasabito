@@ -1,5 +1,4 @@
-﻿
-namespace WalletWasabi.Gui.Models
+﻿namespace WalletWasabi.Gui.Models
 {
 	public class JsonRpcServerConfiguration
 	{

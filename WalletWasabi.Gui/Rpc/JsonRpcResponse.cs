@@ -12,7 +12,6 @@ namespace WalletWasabi.Gui.Rpc
 		InternalError  = -32603,  // Internal JSON-RPC error.
 	}
 
-
 	public class JsonRpcResponse 
 	{
 		// Default error messages for standard JsonRpcErrorCodes 
