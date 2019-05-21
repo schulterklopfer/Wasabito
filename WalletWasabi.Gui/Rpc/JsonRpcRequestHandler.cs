@@ -126,9 +126,9 @@ namespace WalletWasabi.Gui.Rpc
 			{
 				return Error(JsonRpcErrorCodes.InternalError, e.InnerException.Message, jsonRpcRequest.Id);
 			}
-			catch(Exception)
+			catch(Exception e)
 			{
-				return Error(JsonRpcErrorCodes.InternalError, null, jsonRpcRequest.Id);
+				return Error(JsonRpcErrorCodes.InternalError, e.Message, jsonRpcRequest.Id);
 			}
 		}
 
