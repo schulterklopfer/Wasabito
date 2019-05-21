@@ -17,13 +17,15 @@ namespace WalletWasabi.Gui.Rpc
 		private CancellationTokenSource _cts { get; }
 
 		private HttpListener _server;
+		private WasabiJsonRpcService _service;
 		
-		public JsonRpcServer()
+		public JsonRpcServer(Global global)
 		{
 			_server = new HttpListener();
 			_server.Prefixes.Add("http://127.0.0.1:18099/");
 			_server.Prefixes.Add("http://localhost:18099/");
 			_cts = new CancellationTokenSource();
+			_service = new WasabiJsonRpcService(global);
 		}
 
 		public void Start()
@@ -34,8 +36,7 @@ namespace WalletWasabi.Gui.Rpc
 			Task.Run(async ()=>{
 				try
 				{
-					var service = new WasabiJsonRpcService();
-					var handler = new JsonRpcRequestHandler(service);
+					var handler = new JsonRpcRequestHandler(_service);
 
 					while (IsRunning)
 					{

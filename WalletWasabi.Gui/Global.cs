@@ -292,7 +292,7 @@ namespace WalletWasabi.Gui
 
 			#endregion SynchronizerInitialization
 
-			RpcServer = new JsonRpcServer();
+			RpcServer = new JsonRpcServer(this);
 			RpcServer.Start(); // uncomment this in order to make it work 
 
 			Initialized = true;

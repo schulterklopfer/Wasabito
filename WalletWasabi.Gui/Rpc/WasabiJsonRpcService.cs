@@ -10,11 +10,18 @@ namespace WalletWasabi.Gui.Rpc
 {
 	public class WasabiJsonRpcService
 	{
+		private Global _global;
+
+		public WasabiJsonRpcService(Global global)
+		{
+			_global = global;
+		}
+		
 		[JsonRpcMethod("listunspentcoins")]
 		public object[] GetUnspentCoinList()
 		{
 			AssertWalletIsLoaded();
-			return Global.WalletService.Coins.Where(x=>x.Unspent).Select( x=> new {
+			return _global.WalletService.Coins.Where(x=>x.Unspent).Select( x=> new {
 					txid   = x.TransactionId.ToString(), 
 					index  = x.Index, 
 					amount = x.Amount.Satoshi, 
@@ -22,7 +29,7 @@ namespace WalletWasabi.Gui.Rpc
 					confirmed = x.Confirmed,
 					label = x.Label,
 					keyPath = x.HdPubKey.FullKeyPath.ToString(),
-					address = x.HdPubKey.GetP2wpkhAddress(Global.Network).ToString()
+					address = x.HdPubKey.GetP2wpkhAddress(_global.Network).ToString()
 				}).ToArray();
 		}
 
@@ -30,11 +37,11 @@ namespace WalletWasabi.Gui.Rpc
 		public object WalletInfo()
 		{
 			AssertWalletIsLoaded();
-			var km = Global.WalletService.KeyManager;
+			var km = _global.WalletService.KeyManager;
 			return new {
-				walletFile = Global.WalletService.KeyManager.FilePath,
-				extendedAccountPublicKey = km.ExtPubKey.ToString(Global.Network),
-				extendedAccountZpub = km.ExtPubKey.ToZpub(Global.Network),
+				walletFile = _global.WalletService.KeyManager.FilePath,
+				extendedAccountPublicKey = km.ExtPubKey.ToString(_global.Network),
+				extendedAccountZpub = km.ExtPubKey.ToZpub(_global.Network),
 				accountKeyPath = $"m/{km.AccountKeyPath.ToString()}",
 				masterKeyFingerprint = km.MasterFingerprint.ToString(),
 			};
@@ -48,10 +55,10 @@ namespace WalletWasabi.Gui.Rpc
 			{
 				throw new Exception("A non-empty label is required.");
 			}
-			var hdkey = Global.WalletService.KeyManager
+			var hdkey = _global.WalletService.KeyManager
 				.GenerateNewKey(label, KeyManagement.KeyState.Clean, isInternal: false);
 			return new {
-				address = hdkey.GetP2wpkhAddress(Global.Network).ToString(),
+				address = hdkey.GetP2wpkhAddress(_global.Network).ToString(),
 				keyPath = hdkey.FullKeyPath.ToString(),
 				label = hdkey.Label,
 				publicKey = hdkey.PubKey.ToHex(),
@@ -62,7 +69,7 @@ namespace WalletWasabi.Gui.Rpc
 		[JsonRpcMethod("getstatus")]
 		public object GetStatus()
 		{
-			var sync = Global.Synchronizer;
+			var sync = _global.Synchronizer;
 
 			return new {
 					torStatus = sync.TorStatus == TorStatus.NotRunning ? "Not running" : (sync.TorStatus == TorStatus.Running ? "Running" : "Turned off"), 
@@ -73,7 +80,7 @@ namespace WalletWasabi.Gui.Rpc
 					filtersLeft = sync.BitcoinStore.HashChain.HashesLeft,
 					network = sync.Network.Name, 
 					exchangeRate = sync.UsdExchangeRate,
-					peers = Global.Nodes.ConnectedNodes.Select(x=> new {
+					peers = _global.Nodes.ConnectedNodes.Select(x=> new {
 						isConnected = x.IsConnected,
 						lastSeen = x.LastSeen,
 						endpoint = x.Peer.Endpoint.ToString(),
@@ -89,7 +96,7 @@ namespace WalletWasabi.Gui.Rpc
 		}
 		private void AssertWalletIsLoaded()
 		{
-			if(Global.WalletService == null)
+			if(_global.WalletService == null)
 			{
 				throw new Exception("There is not wallet loaded.");
 			}

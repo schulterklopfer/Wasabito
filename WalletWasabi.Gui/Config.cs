@@ -1,4 +1,4 @@
-using NBitcoin;
+﻿using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -27,6 +27,7 @@ namespace WalletWasabi.Gui
 		public const int DefaultPrivacyLevelStrong = 50;
 		public const int DefaultMixUntilAnonymitySet = 50;
 		public const int DefaultTorSock5Port = 9050;
+		public const int DefaultJsonRpcServerPort = 18099;
 		public static readonly Money DefaultDustThreshold = Money.Coins(0.0001m);
 
 		[JsonProperty(PropertyName = "Network")]
@@ -72,6 +73,15 @@ namespace WalletWasabi.Gui
 		[JsonProperty(PropertyName = "RegTestBitcoinP2pEndPoint")]
 		[JsonConverter(typeof(EndPointJsonConverter), Constants.DefaultRegTestBitcoinP2pPort)]
 		public EndPoint RegTestBitcoinP2pEndPoint { get; internal set; } = new IPEndPoint(IPAddress.Loopback, Constants.DefaultRegTestBitcoinP2pPort);
+
+
+		[DefaultValue(false)]
+		[JsonProperty(PropertyName = "JsonRpcServerEnabled", DefaultValueHandling = DefaultValueHandling.Populate)]
+		public bool JsonRpcServerEnabled { get; internal set; }
+
+		[DefaultValue(DefaultJsonRpcServerPort)]
+		[JsonProperty(PropertyName = "JsonRpcServerPort", DefaultValueHandling = DefaultValueHandling.Populate)]
+		public int JsonRpcServerPort { get; internal set; }
 
 		[DefaultValue(DefaultMixUntilAnonymitySet)]
 		[JsonProperty(PropertyName = "MixUntilAnonymitySet", DefaultValueHandling = DefaultValueHandling.Populate)]
