@@ -93,20 +93,25 @@ namespace WalletWasabi.Gui.Rpc
 		}
 
 		[JsonRpcMethod("send")]
-		public async Task SendTransaction(BitcoinAddress address, TxoRef[] outpoints, long amount, string label, int feeTarget)
+		public async Task<object> SendTransaction(BitcoinAddress sendto, TxoRef[] coins, long amount, string label, int feeTarget)
 		{
 			AssertWalletIsLoaded();
 
 			var sync = Global.Synchronizer;
-			var operation = new WalletService.Operation(address.ScriptPubKey, amount, label);
+			var operation = new WalletService.Operation(sendto.ScriptPubKey, amount, label);
 			var password = string.Empty;
 			var result = Global.WalletService.BuildTransaction(
 				password, 
 				new[] { operation }, 
 				feeTarget, 
 				allowUnconfirmed: true, 
-				allowedInputs: outpoints);
-			await Global.WalletService.SendTransactionAsync(result.Transaction);
+				allowedInputs: coins);
+			var smartTx = result.Transaction;
+			await Global.WalletService.SendTransactionAsync(smartTx);
+			return new {
+				txid = smartTx.Transaction.GetHash(),
+				tx = smartTx.Transaction.ToHex()
+			};
 		}
 
 
