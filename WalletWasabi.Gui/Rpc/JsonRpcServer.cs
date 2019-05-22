@@ -25,8 +25,10 @@ namespace WalletWasabi.Gui.Rpc
 			_config = config;
 			_listener = new HttpListener();
 			_listener.AuthenticationSchemes = AuthenticationSchemes.Basic | AuthenticationSchemes.Anonymous;
-			_listener.Prefixes.Add($"http://127.0.0.1:{config.Port}/");
-			_listener.Prefixes.Add($"http://localhost:{config.Port}/");
+			foreach(var prefix in _config.Prefixes)
+			{
+				_listener.Prefixes.Add(prefix);
+			}
 			_cts = new CancellationTokenSource();
 		}
 
@@ -47,41 +49,34 @@ namespace WalletWasabi.Gui.Rpc
 						var request = context.Request;
 						var response = context.Response;
 
-						if (_config.IsEnabled)
+						if (request.HttpMethod == "POST")
 						{
-							if (request.HttpMethod == "POST")
-							{
-								string body;
-								using(var reader = new StreamReader(request.InputStream))
-									body = await reader.ReadToEndAsync();
+							string body;
+							using(var reader = new StreamReader(request.InputStream))
+								body = await reader.ReadToEndAsync();
 
-								var identity = (HttpListenerBasicIdentity)context.User?.Identity;
-								if (!_config.RequiresCredentials || CheckValidCredentials(identity))
+							var identity = (HttpListenerBasicIdentity)context.User?.Identity;
+							if (!_config.RequiresCredentials || CheckValidCredentials(identity))
+							{
+								var result = await handler.HandleAsync(body, _cts);
+								
+								// result is null only when the request is a notification.
+								if(!string.IsNullOrEmpty(result))
 								{
-									var result = await handler.HandleAsync(body, _cts);
-									
-									// result is null only when the request is a notification.
-									if(!string.IsNullOrEmpty(result))
-									{
-										var output = response.OutputStream;
-										var buffer = Encoding.UTF8.GetBytes(result);
-										await output.WriteAsync(buffer, 0, buffer.Length);
-										await output.FlushAsync();
-									}
-								}
-								else
-								{
-									response.StatusCode = (int)HttpStatusCode.Unauthorized;
+									var output = response.OutputStream;
+									var buffer = Encoding.UTF8.GetBytes(result);
+									await output.WriteAsync(buffer, 0, buffer.Length);
+									await output.FlushAsync();
 								}
 							}
 							else
 							{
-								response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+								response.StatusCode = (int)HttpStatusCode.Unauthorized;
 							}
 						}
 						else
 						{
-							response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+							response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
 						}
 						response.Close();
 					}
