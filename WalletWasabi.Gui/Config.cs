@@ -83,6 +83,14 @@ namespace WalletWasabi.Gui
 		[JsonProperty(PropertyName = "JsonRpcServerPort", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public int JsonRpcServerPort { get; internal set; }
 
+		[DefaultValue("")]
+		[JsonProperty(PropertyName = "JsonRpcUser", DefaultValueHandling = DefaultValueHandling.Populate)]
+		public string JsonRpcUser { get; internal set; }
+
+		[DefaultValue("")]
+		[JsonProperty(PropertyName = "JsonRpcPassword", DefaultValueHandling = DefaultValueHandling.Populate)]
+		public string JsonRpcPassword { get; internal set; }
+
 		[DefaultValue(DefaultMixUntilAnonymitySet)]
 		[JsonProperty(PropertyName = "MixUntilAnonymitySet", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public int MixUntilAnonymitySet

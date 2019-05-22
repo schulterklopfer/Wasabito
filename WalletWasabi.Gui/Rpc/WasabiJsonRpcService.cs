@@ -44,7 +44,7 @@ namespace WalletWasabi.Gui.Rpc
 				extendedAccountZpub = km.ExtPubKey.ToZpub(_global.Network),
 				accountKeyPath = $"m/{km.AccountKeyPath.ToString()}",
 				masterKeyFingerprint = km.MasterFingerprint.ToString(),
-				balance = Global.WalletService.Coins
+				balance = _global.WalletService.Coins
 							.Where(c => c.Unspent && !c.IsDust && !c.SpentAccordingToBackend)
 							.Sum(c => c.Amount.Satoshi)
 			};
@@ -96,17 +96,17 @@ namespace WalletWasabi.Gui.Rpc
 		public async Task<object> SendTransaction(BitcoinAddress sendto, TxoRef[] coins, long amount, string label, int feeTarget)
 		{
 			AssertWalletIsLoaded();
-			var sync = Global.Synchronizer;
+			var sync = _global.Synchronizer;
 			var operation = new WalletService.Operation(sendto.ScriptPubKey, amount, label);
 			var password = string.Empty;
-			var result = Global.WalletService.BuildTransaction(
+			var result = _global.WalletService.BuildTransaction(
 				password, 
 				new[] { operation }, 
 				feeTarget, 
 				allowUnconfirmed: true, 
 				allowedInputs: coins);
 			var smartTx = result.Transaction;
-			await Global.WalletService.SendTransactionAsync(smartTx);
+			await _global.WalletService.SendTransactionAsync(smartTx);
 			return new {
 				txid = smartTx.Transaction.GetHash(),
 				tx = smartTx.Transaction.ToHex()
