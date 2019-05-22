@@ -17,22 +17,23 @@ namespace WalletWasabi.Gui.Rpc
 		public bool IsStopping => Interlocked.Read(ref _running) == 2;
 		private CancellationTokenSource _cts { get; }
 
-		private HttpListener _server;
+		private HttpListener _listener;
 		private JsonRpcServerConfiguration _config;
 
 		public JsonRpcServer(JsonRpcServerConfiguration config)
 		{
 			_config = config;
-			_server = new HttpListener();
-			_server.Prefixes.Add($"http://127.0.0.1:{config.Port}/");
-			_server.Prefixes.Add($"http://localhost:{config.Port}/");
+			_listener = new HttpListener();
+			_listener.AuthenticationSchemes = AuthenticationSchemes.Basic | AuthenticationSchemes.Anonymous;
+			_listener.Prefixes.Add($"http://127.0.0.1:{config.Port}/");
+			_listener.Prefixes.Add($"http://localhost:{config.Port}/");
 			_cts = new CancellationTokenSource();
 		}
 
 		public void Start()
 		{
 			Interlocked.Exchange(ref _running, 1);
-			_server.Start();
+			_listener.Start();
 
 			Task.Run(async ()=>{
 				try
@@ -42,7 +43,7 @@ namespace WalletWasabi.Gui.Rpc
 
 					while (IsRunning)
 					{
-						var context = _server.GetContext();
+						var context = _listener.GetContext();
 						var request = context.Request;
 						var response = context.Response;
 
@@ -52,20 +53,28 @@ namespace WalletWasabi.Gui.Rpc
 							using(var reader = new StreamReader(request.InputStream))
 								body = await reader.ReadToEndAsync();
 
-							var result = await handler.HandleAsync(body, _cts);
-							
-							// result is null only when the request is a notification.
-							if(!string.IsNullOrEmpty(result))
+							var identity = (HttpListenerBasicIdentity)context.User?.Identity;
+							if (!_config.RequiresCredentials || CheckValidCredentials(identity))
 							{
-								var output = response.OutputStream;
-								var buffer = Encoding.UTF8.GetBytes(result);
-								await output.WriteAsync(buffer, 0, buffer.Length);
-								await output.FlushAsync();
+								var result = await handler.HandleAsync(body, _cts);
+								
+								// result is null only when the request is a notification.
+								if(!string.IsNullOrEmpty(result))
+								{
+									var output = response.OutputStream;
+									var buffer = Encoding.UTF8.GetBytes(result);
+									await output.WriteAsync(buffer, 0, buffer.Length);
+									await output.FlushAsync();
+								}
+							}
+							else
+							{
+								response.StatusCode = (int)HttpStatusCode.Unauthorized;
 							}
 						}
 						else
 						{
-							response.StatusCode = 503; // Service unavailable
+							response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
 						}
 						response.Close();
 					}
@@ -80,13 +89,18 @@ namespace WalletWasabi.Gui.Rpc
 		internal void Stop()
 		{
 			Interlocked.CompareExchange(ref _running, 2, 1); // If running, make it stopping.;
-			_server.Stop();
+			_listener.Stop();
 			_cts.Cancel();
 			while (IsStopping)
 			{
 				Task.Delay(50).GetAwaiter().GetResult();
 			}
 			_cts.Dispose();
+		}
+
+		private bool CheckValidCredentials(HttpListenerBasicIdentity identity)
+		{
+			return identity != null && (identity.Name == _config.JsonRpcUser && identity.Password == _config.JsonRpcPassword);
 		}
 	}
 }

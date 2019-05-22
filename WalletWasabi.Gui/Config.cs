@@ -150,6 +150,12 @@ namespace WalletWasabi.Gui
 		[JsonProperty(PropertyName = "JsonRpcServerPort")]
 		public int? JsonRpcServerPort { get; internal set; }
 
+		[JsonProperty(PropertyName = "JsonRpcUser")]
+		public string JsonRpcUser { get; internal set; }
+
+		[JsonProperty(PropertyName = "JsonRpcPassword")]
+		public string JsonRpcPassword { get; internal set; }
+
 		public Uri GetCurrentBackendUri()
 		{
 			if (TorProcessManager.RequestFallbackAddressUsage)
@@ -291,7 +297,9 @@ namespace WalletWasabi.Gui
 			int? privacyLevelStrong,
 			Money dustThreshold
 			bool? jsonRpcServerEnabled,
-			int? jsonRpcServerPort
+			int? jsonRpcServerPort,
+			string jsonRpcUser,
+			string jsonRpcPassword
 			)
 		{
 			Network = Guard.NotNull(nameof(network), network);
@@ -323,6 +331,8 @@ namespace WalletWasabi.Gui
 
 			JsonRpcServerEnabled = Guard.NotNull(nameof(jsonRpcServerEnabled), jsonRpcServerEnabled);
 			JsonRpcServerPort = Guard.NotNull(nameof(jsonRpcServerPort), jsonRpcServerPort);
+			JsonRpcUser = Guard.NotNullOrEmptyOrWhitespace(nameof(jsonRpcUser), jsonRpcUser);
+			JsonRpcPassword = Guard.NotNullOrEmptyOrWhitespace(nameof(jsonRpcPassword), jsonRpcPassword);
 
 			ServiceConfiguration = new ServiceConfiguration(MixUntilAnonymitySet.Value, PrivacyLevelSome.Value, PrivacyLevelFine.Value, PrivacyLevelStrong.Value, GetBitcoinCoreEndPoint(), DustThreshold);
 		}
@@ -370,6 +380,8 @@ namespace WalletWasabi.Gui
 
 			JsonRpcServerEnabled = false;
 			JsonRpcServerPort = 18099;
+			JsonRpcUser = "";
+			JsonRpcPassword = "";
 
 			if (!File.Exists(FilePath))
 			{
@@ -423,6 +435,8 @@ namespace WalletWasabi.Gui
 
 			JsonRpcServerEnabled = config.JsonRpcServerEnabled ?? JsonRpcServerEnabled;
 			JsonRpcServerPort = config.JsonRpcServerPort ?? JsonRpcServerPort;
+			JsonRpcUser = config.JsonRpcUser ?? JsonRpcUser;
+			JsonRpcPassword = config.JsonRpcPassword ?? JsonRpcPassword;
 
 			// Just debug convenience.
 			_backendUri = GetCurrentBackendUri();
@@ -527,6 +541,14 @@ namespace WalletWasabi.Gui
 				return true;
 			}
 			if (JsonRpcServerPort != config.JsonRpcServerPort)
+			{
+				return true;
+			}
+			if (JsonRpcUser != config.JsonRpcUser)
+			{
+				return true;
+			}
+			if (JsonRpcPassword != config.JsonRpcPassword)
 			{
 				return true;
 			}
