@@ -50,27 +50,34 @@ namespace WalletWasabi.Gui.Rpc
 
 						if (_config.IsEnabled)
 						{
-							string body;
-							using(var reader = new StreamReader(request.InputStream))
-								body = await reader.ReadToEndAsync();
-
-							var identity = (HttpListenerBasicIdentity)context.User?.Identity;
-							if (!_config.RequiresCredentials || CheckValidCredentials(identity))
+							if (request.HttpMethod == "POST")
 							{
-								var result = await handler.HandleAsync(body, _cts);
-								
-								// result is null only when the request is a notification.
-								if(!string.IsNullOrEmpty(result))
+								string body;
+								using(var reader = new StreamReader(request.InputStream))
+									body = await reader.ReadToEndAsync();
+
+								var identity = (HttpListenerBasicIdentity)context.User?.Identity;
+								if (!_config.RequiresCredentials || CheckValidCredentials(identity))
 								{
-									var output = response.OutputStream;
-									var buffer = Encoding.UTF8.GetBytes(result);
-									await output.WriteAsync(buffer, 0, buffer.Length);
-									await output.FlushAsync();
+									var result = await handler.HandleAsync(body, _cts);
+									
+									// result is null only when the request is a notification.
+									if(!string.IsNullOrEmpty(result))
+									{
+										var output = response.OutputStream;
+										var buffer = Encoding.UTF8.GetBytes(result);
+										await output.WriteAsync(buffer, 0, buffer.Length);
+										await output.FlushAsync();
+									}
+								}
+								else
+								{
+									response.StatusCode = (int)HttpStatusCode.Unauthorized;
 								}
 							}
 							else
 							{
-								response.StatusCode = (int)HttpStatusCode.Unauthorized;
+								response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
 							}
 						}
 						else
