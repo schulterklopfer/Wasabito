@@ -106,6 +106,17 @@ namespace WalletWasabi.Gui.Rpc
 				allowUnconfirmed: true, 
 				allowedInputs: coins);
 			var smartTx = result.Transaction;
+
+			// dequeue the coins we are going to spend
+			TxoRef[] toDequeue = _global.WalletService.Coins
+				.Where(x => x.CoinJoinInProgress && coins.Contains(x.GetTxoRef()))
+				.Select(x => x.GetTxoRef())
+				.ToArray();
+			if (toDequeue.Any())
+			{
+				await _global.ChaumianClient.DequeueCoinsFromMixAsync(toDequeue, "Coin is used in a spending transaction built by the user.");
+			}
+
 			await _global.WalletService.SendTransactionAsync(smartTx);
 			return new {
 				txid = smartTx.Transaction.GetHash(),
@@ -116,7 +127,7 @@ namespace WalletWasabi.Gui.Rpc
 		[JsonRpcMethod("stop")]
 		public async Task StopAsync()
 		{
-			await Global.StopAndExitAsync();
+			await _global.StopAndExitAsync();
 		}
 		private void AssertWalletIsLoaded()
 		{
