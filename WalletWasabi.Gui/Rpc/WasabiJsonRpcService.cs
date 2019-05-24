@@ -99,6 +99,17 @@ namespace WalletWasabi.Gui.Rpc
 				allowUnconfirmed: true, 
 				allowedInputs: coins);
 			var smartTx = result.Transaction;
+
+			// dequeue the coins whe are goind to spend
+			TxoRef[] toDequeue = Global.WalletService.Coins
+				.Where(x => x.CoinJoinInProgress && coins.Contains(x.GetTxoRef()))
+				.Select(x => x.GetTxoRef())
+				.ToArray();
+			if (toDequeue.Any())
+			{
+				await Global.ChaumianClient.DequeueCoinsFromMixAsync(toDequeue, "Coin is used in a spending transaction built by the user.");
+			}
+
 			await Global.WalletService.SendTransactionAsync(smartTx);
 			return new {
 				txid = smartTx.Transaction.GetHash(),
