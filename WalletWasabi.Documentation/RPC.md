@@ -1,6 +1,3 @@
-```diff
-- This document is under contruction!!!
-```
 # Wasabi Remote Procedure Call interface
 
 Wasabi wallet provides an RPC interface to interact with the wallet programatically. The RPC server is listing by default on port 18099. 
