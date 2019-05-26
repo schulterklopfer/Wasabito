@@ -541,10 +541,6 @@ namespace WalletWasabi.Gui
 			{
 				return true;
 			}
-			if (JsonRpcServerEnabled != config.JsonRpcServerEnabled)
-			{
-				return true;
-			}
 			if (JsonRpcUser != config.JsonRpcUser)
 			{
 				return true;
