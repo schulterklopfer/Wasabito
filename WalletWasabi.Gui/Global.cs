@@ -307,7 +307,7 @@ namespace WalletWasabi.Gui
 			Initialized = true;
 		}
 
-		internal static async Task StopAndExitAsync()
+		internal async Task StopAndExitAsync()
 		{
 			Logger.LogWarning("Process was signaled for killing.", nameof(Global));
 

@@ -64,6 +64,7 @@ namespace WalletWasabi.Gui.Rpc
 								// result is null only when the request is a notification.
 								if(!string.IsNullOrEmpty(result))
 								{
+									response.ContentType = "application/json-rpc";
 									var output = response.OutputStream;
 									var buffer = Encoding.UTF8.GetBytes(result);
 									await output.WriteAsync(buffer, 0, buffer.Length);

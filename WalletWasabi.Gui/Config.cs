@@ -74,7 +74,6 @@ namespace WalletWasabi.Gui
 		[JsonConverter(typeof(EndPointJsonConverter), Constants.DefaultRegTestBitcoinP2pPort)]
 		public EndPoint RegTestBitcoinP2pEndPoint { get; internal set; } = new IPEndPoint(IPAddress.Loopback, Constants.DefaultRegTestBitcoinP2pPort);
 
-
 		[DefaultValue(false)]
 		[JsonProperty(PropertyName = "JsonRpcServerEnabled", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public bool JsonRpcServerEnabled { get; internal set; }
@@ -92,7 +91,6 @@ namespace WalletWasabi.Gui
 			"http://127.0.0.1:18099/",
 			"http://localhost:18099/"
 			};
-
 
 		[DefaultValue(DefaultMixUntilAnonymitySet)]
 		[JsonProperty(PropertyName = "MixUntilAnonymitySet", DefaultValueHandling = DefaultValueHandling.Populate)]
