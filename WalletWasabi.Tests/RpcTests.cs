@@ -81,10 +81,5 @@ namespace WalletWasabi.Tests
 			Assert.Equal(expectedResponse, response);
 		}
 
-		[Fact]
-		public void ServiceMetadataTests()
-		{
-
-		}
 	}
 }
