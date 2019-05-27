@@ -38,7 +38,7 @@ namespace WalletWasabi.Gui.Rpc
 				accountKeyPath = $"m/{km.AccountKeyPath.ToString()}",
 				masterKeyFingerprint = km.MasterFingerprint.ToString(),
 				balance = Global.WalletService.Coins
-							.Where(c => c.Unspent && !c.IsDust && !c.SpentAccordingToBackend)
+							.Where(c => c.Unspent && !c.SpentAccordingToBackend)
 							.Sum(c => c.Amount.Satoshi)
 			};
 		}
