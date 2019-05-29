@@ -306,7 +306,8 @@ namespace WalletWasabi.Tests
 		{
 			(string password, RPCClient rpc, Network network, CcjCoordinator coordinator, ServiceConfiguration serviceConfiguration, BitcoinStore bitcoinStore) = await InitializeTestEnvironmentAsync(1);
 
-			using (var synchronizer = new WasabiSynchronizer(rpc.Network, bitcoinStore, new Uri(RegTestFixture.BackendEndPoint), null))
+			var synchronizer = new WasabiSynchronizer(rpc.Network, bitcoinStore, new Uri(RegTestFixture.BackendEndPoint), null);
+			try
 			{
 				synchronizer.Start(requestInterval: TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), 1000);
 
@@ -359,6 +360,10 @@ namespace WalletWasabi.Tests
 					Assert.Null(filter.Filter);
 				}
 			}
+			finally
+			{
+				await synchronizer?.StopAsync();
+			}
 		}
 
 		[Fact]
@@ -384,102 +389,102 @@ namespace WalletWasabi.Tests
 
 			var node = RegTestFixture.BackendRegTestNode;
 
-			using (var synchronizer = new WasabiSynchronizer(rpc.Network, bitcoinStore, new Uri(RegTestFixture.BackendEndPoint), null))
+			var synchronizer = new WasabiSynchronizer(rpc.Network, bitcoinStore, new Uri(RegTestFixture.BackendEndPoint), null);
+
+			try
 			{
-				try
+				synchronizer.Start(requestInterval: TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(5), 1000);
+
+				bitcoinStore.IndexStore.Reorged += ReorgTestAsync_Downloader_Reorged;
+
+				// Test initial synchronization.
+				await WaitForIndexesToSyncAsync(TimeSpan.FromSeconds(90), bitcoinStore);
+
+				var tip = await rpc.GetBestBlockHashAsync();
+				Assert.Equal(tip, bitcoinStore.HashChain.TipHash);
+				var tipBlock = await rpc.GetBlockHeaderAsync(tip);
+				Assert.Equal(tipBlock.HashPrevBlock, bitcoinStore.HashChain.GetChain().Select(x => x.hash).ToArray()[bitcoinStore.HashChain.HashCount - 2]);
+
+				var utxoPath = Backend.Global.IndexBuilderService.Bech32UtxoSetFilePath;
+				var utxoLines = await File.ReadAllTextAsync(utxoPath);
+				Assert.Contains(tx1.ToString(), utxoLines);
+				Assert.Contains(tx2.ToString(), utxoLines);
+				Assert.Contains(tx3.ToString(), utxoLines);
+				Assert.DoesNotContain(tx4.ToString(), utxoLines); // make sure only bech is recorded
+				Assert.DoesNotContain(tx5.ToString(), utxoLines); // make sure only bech is recorded
+
+				// Test synchronization after fork.
+				await rpc.InvalidateBlockAsync(tip); // Reorg 1
+				tip = await rpc.GetBestBlockHashAsync();
+				await rpc.InvalidateBlockAsync(tip); // Reorg 2
+				var tx1bumpRes = await rpc.BumpFeeAsync(tx1); // RBF it
+
+				await rpc.GenerateAsync(5);
+				await WaitForIndexesToSyncAsync(TimeSpan.FromSeconds(90), bitcoinStore);
+
+				utxoLines = await File.ReadAllTextAsync(utxoPath);
+				Assert.Contains(tx1bumpRes.TransactionId.ToString(), utxoLines); // assert the tx1bump is the correct tx
+				Assert.DoesNotContain(tx1.ToString(), utxoLines); // assert tx1 is abandoned (despite it confirmed previously)
+				Assert.Contains(tx2.ToString(), utxoLines);
+				Assert.Contains(tx3.ToString(), utxoLines);
+				Assert.DoesNotContain(tx4.ToString(), utxoLines);
+				Assert.DoesNotContain(tx5.ToString(), utxoLines);
+
+				var hashes = bitcoinStore.HashChain.GetChain().Select(x => x.hash).ToArray();
+				Assert.DoesNotContain(tip, hashes);
+				Assert.DoesNotContain(tipBlock.HashPrevBlock, hashes);
+
+				tip = await rpc.GetBestBlockHashAsync();
+				Assert.Equal(tip, bitcoinStore.HashChain.TipHash);
+
+				var filterList = new List<FilterModel>();
+				await bitcoinStore.IndexStore.ForeachFiltersAsync(async x =>
 				{
-					synchronizer.Start(requestInterval: TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(5), 1000);
+					filterList.Add(x);
+					await Task.CompletedTask;
+				}, new Height(0));
+				var filterTip = filterList.Last();
+				Assert.Equal(tip, filterTip.BlockHash);
 
-					bitcoinStore.IndexStore.Reorged += ReorgTestAsync_Downloader_Reorged;
+				// Test filter block hashes are correct after fork.
+				var blockCountIncludingGenesis = await rpc.GetBlockCountAsync() + 1;
 
-					// Test initial synchronization.
-					await WaitForIndexesToSyncAsync(TimeSpan.FromSeconds(90), bitcoinStore);
-
-					var tip = await rpc.GetBestBlockHashAsync();
-					Assert.Equal(tip, bitcoinStore.HashChain.TipHash);
-					var tipBlock = await rpc.GetBlockHeaderAsync(tip);
-					Assert.Equal(tipBlock.HashPrevBlock, bitcoinStore.HashChain.GetChain().Select(x => x.hash).ToArray()[bitcoinStore.HashChain.HashCount - 2]);
-
-					var utxoPath = Backend.Global.IndexBuilderService.Bech32UtxoSetFilePath;
-					var utxoLines = await File.ReadAllTextAsync(utxoPath);
-					Assert.Contains(tx1.ToString(), utxoLines);
-					Assert.Contains(tx2.ToString(), utxoLines);
-					Assert.Contains(tx3.ToString(), utxoLines);
-					Assert.DoesNotContain(tx4.ToString(), utxoLines); // make sure only bech is recorded
-					Assert.DoesNotContain(tx5.ToString(), utxoLines); // make sure only bech is recorded
-
-					// Test synchronization after fork.
-					await rpc.InvalidateBlockAsync(tip); // Reorg 1
-					tip = await rpc.GetBestBlockHashAsync();
-					await rpc.InvalidateBlockAsync(tip); // Reorg 2
-					var tx1bumpRes = await rpc.BumpFeeAsync(tx1); // RBF it
-
-					await rpc.GenerateAsync(5);
-					await WaitForIndexesToSyncAsync(TimeSpan.FromSeconds(90), bitcoinStore);
-
-					utxoLines = await File.ReadAllTextAsync(utxoPath);
-					Assert.Contains(tx1bumpRes.TransactionId.ToString(), utxoLines); // assert the tx1bump is the correct tx
-					Assert.DoesNotContain(tx1.ToString(), utxoLines); // assert tx1 is abandoned (despite it confirmed previously)
-					Assert.Contains(tx2.ToString(), utxoLines);
-					Assert.Contains(tx3.ToString(), utxoLines);
-					Assert.DoesNotContain(tx4.ToString(), utxoLines);
-					Assert.DoesNotContain(tx5.ToString(), utxoLines);
-
-					var hashes = bitcoinStore.HashChain.GetChain().Select(x => x.hash).ToArray();
-					Assert.DoesNotContain(tip, hashes);
-					Assert.DoesNotContain(tipBlock.HashPrevBlock, hashes);
-
-					tip = await rpc.GetBestBlockHashAsync();
-					Assert.Equal(tip, bitcoinStore.HashChain.TipHash);
-
-					var filterList = new List<FilterModel>();
-					await bitcoinStore.IndexStore.ForeachFiltersAsync(async x =>
-					{
-						filterList.Add(x);
-						await Task.CompletedTask;
-					}, new Height(0));
-					var filterTip = filterList.Last();
-					Assert.Equal(tip, filterTip.BlockHash);
-
-					// Test filter block hashes are correct after fork.
-					var blockCountIncludingGenesis = await rpc.GetBlockCountAsync() + 1;
-
-					filterList.Clear();
-					await bitcoinStore.IndexStore.ForeachFiltersAsync(async x =>
-					{
-						filterList.Add(x);
-						await Task.CompletedTask;
-					}, new Height(0));
-					FilterModel[] filters = filterList.ToArray();
-					for (int i = 0; i < blockCountIncludingGenesis; i++)
-					{
-						var expectedHash = await rpc.GetBlockHashAsync(i);
-						var filter = filters[i];
-						Assert.Equal(i, filter.BlockHeight.Value);
-						Assert.Equal(expectedHash, filter.BlockHash);
-						if (i < 101) // Later other tests may fill the filter.
-						{
-							Assert.Null(filter.Filter);
-						}
-					}
-
-					// Test the serialization, too.
-					tip = await rpc.GetBestBlockHashAsync();
-					var blockHash = tip;
-					for (var i = 0; i < hashes.Length; i++)
-					{
-						var block = await rpc.GetBlockHeaderAsync(blockHash);
-						Assert.Equal(blockHash, hashes[hashes.Length - i - 1]);
-						blockHash = block.HashPrevBlock;
-					}
-
-					// Assert reorg happened exactly as many times as we reorged.
-					Assert.Equal(2, Interlocked.Read(ref _reorgTestAsync_ReorgCount));
-				}
-				finally
+				filterList.Clear();
+				await bitcoinStore.IndexStore.ForeachFiltersAsync(async x =>
 				{
-					bitcoinStore.IndexStore.Reorged -= ReorgTestAsync_Downloader_Reorged;
+					filterList.Add(x);
+					await Task.CompletedTask;
+				}, new Height(0));
+				FilterModel[] filters = filterList.ToArray();
+				for (int i = 0; i < blockCountIncludingGenesis; i++)
+				{
+					var expectedHash = await rpc.GetBlockHashAsync(i);
+					var filter = filters[i];
+					Assert.Equal(i, filter.BlockHeight.Value);
+					Assert.Equal(expectedHash, filter.BlockHash);
+					if (i < 101) // Later other tests may fill the filter.
+					{
+						Assert.Null(filter.Filter);
+					}
 				}
+
+				// Test the serialization, too.
+				tip = await rpc.GetBestBlockHashAsync();
+				var blockHash = tip;
+				for (var i = 0; i < hashes.Length; i++)
+				{
+					var block = await rpc.GetBlockHeaderAsync(blockHash);
+					Assert.Equal(blockHash, hashes[hashes.Length - i - 1]);
+					blockHash = block.HashPrevBlock;
+				}
+
+				// Assert reorg happened exactly as many times as we reorged.
+				Assert.Equal(2, Interlocked.Read(ref _reorgTestAsync_ReorgCount));
+			}
+			finally
+			{
+				bitcoinStore.IndexStore.Reorged -= ReorgTestAsync_Downloader_Reorged;
+				await synchronizer?.StopAsync();
 			}
 		}
 
@@ -696,7 +701,7 @@ namespace WalletWasabi.Tests
 				wallet.NewFilterProcessed -= Wallet_NewFilterProcessed;
 				wallet?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
+				await synchronizer?.StopAsync();
 
 				// Dispose mempool service.
 				memPoolService.TransactionReceived -= WalletTestsAsync_MemPoolService_TransactionReceived;
@@ -1170,7 +1175,7 @@ namespace WalletWasabi.Tests
 				wallet.NewFilterProcessed -= Wallet_NewFilterProcessed;
 				wallet?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
+				await synchronizer?.StopAsync();
 				// Dispose connection service.
 				nodes?.Dispose();
 				// Dispose mempool serving node.
@@ -1333,7 +1338,7 @@ namespace WalletWasabi.Tests
 			{
 				wallet?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
+				await synchronizer?.StopAsync();
 				// Dispose connection service.
 				nodes?.Dispose();
 				// Dispose mempool serving node.
@@ -1497,7 +1502,7 @@ namespace WalletWasabi.Tests
 			{
 				wallet?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
+				await synchronizer?.StopAsync();
 				// Dispose connection service.
 				nodes?.Dispose();
 				// Dispose mempool serving node.
@@ -1663,7 +1668,7 @@ namespace WalletWasabi.Tests
 			{
 				wallet?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
+				await synchronizer?.StopAsync();
 				// Dispose connection service.
 				nodes?.Dispose();
 				// Dispose mempool serving node.
@@ -1769,7 +1774,7 @@ namespace WalletWasabi.Tests
 			{
 				wallet?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
+				await synchronizer?.StopAsync();
 				// Dispose connection service.
 				nodes?.Dispose();
 				// Dispose mempool serving node.
@@ -3450,8 +3455,6 @@ namespace WalletWasabi.Tests
 			{
 				wallet.NewFilterProcessed -= Wallet_NewFilterProcessed;
 				wallet?.Dispose();
-				// Dispose wasabi synchronizer service.
-				synchronizer?.Dispose();
 				// Dispose connection service.
 				nodes?.Dispose();
 				// Dispose mempool serving node.
@@ -3463,7 +3466,7 @@ namespace WalletWasabi.Tests
 				}
 				wallet2?.Dispose();
 				// Dispose wasabi synchronizer service.
-				synchronizer2?.Dispose();
+				await synchronizer?.StopAsync();
 				// Dispose connection service.
 				nodes2?.Dispose();
 				// Dispose chaumian coinjoin client.

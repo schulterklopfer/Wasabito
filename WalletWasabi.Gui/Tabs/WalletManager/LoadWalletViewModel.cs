@@ -263,7 +263,17 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 				foreach (var file in walletFiles)
 				{
 					var wallet = new LoadWalletEntry(Path.GetFileNameWithoutExtension(file.FullName));
-					Wallets.Add(wallet);
+					if (IsPasswordRequired)
+					{
+						if (KeyManager.TryGetEncryptedSecretFromFile(file.FullName, out _))
+						{
+							Wallets.Add(wallet);
+						}
+					}
+					else
+					{
+						Wallets.Add(wallet);
+					}
 				}
 
 				SelectedWallet = Wallets.FirstOrDefault();
@@ -627,7 +637,10 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 				{
 					// Initialization failed.
 					SetValidationMessage(ex.ToTypeMessageString());
-					Logger.LogError<LoadWalletViewModel>(ex);
+					if (!(ex is OperationCanceledException))
+					{
+						Logger.LogError<LoadWalletViewModel>(ex);
+					}
 					await Global.DisposeInWalletDependentServicesAsync();
 				}
 			}

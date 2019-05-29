@@ -4,6 +4,7 @@ using NBitcoin;
 using NBitcoin.Protocol;
 using NBitcoin.Protocol.Behaviors;
 using NBitcoin.Protocol.Connectors;
+using Nito.AsyncEx;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -169,6 +170,9 @@ namespace WalletWasabi.Gui
 				{
 					Application.Current?.MainWindow?.Close();
 				});
+				await DisposeAsync();
+
+				Logger.LogInfo($"Wasabi stopped gracefully.", Logger.InstanceGuid.ToString());
 			};
 
 			#endregion ProcessKillSubscription
@@ -381,32 +385,35 @@ namespace WalletWasabi.Gui
 
 		public static async Task InitializeWalletServiceAsync(KeyManager keyManager)
 		{
-			while (!Initialized)
-			{
-				await Task.Delay(100);
-			}
-
-			if (Config.UseTor.Value)
-			{
-				ChaumianClient = new CcjClient(Synchronizer, Network, keyManager, () => Config.GetCurrentBackendUri(), Config.GetTorSocks5EndPoint());
-			}
-			else
-			{
-				ChaumianClient = new CcjClient(Synchronizer, Network, keyManager, Config.GetFallbackBackendUri(), null);
-			}
-			WalletService = new WalletService(BitcoinStore, keyManager, Synchronizer, ChaumianClient, MemPoolService, Nodes, DataDir, Config.ServiceConfiguration);
-
-			ChaumianClient.Start();
-			Logger.LogInfo("Start Chaumian CoinJoin service...");
-
 			using (CancelWalletServiceInitialization = new CancellationTokenSource())
 			{
+				var token = CancelWalletServiceInitialization.Token;
+				while (!Initialized)
+				{
+					await Task.Delay(100, token);
+				}
+
+				if (Config.UseTor.Value)
+				{
+					ChaumianClient = new CcjClient(Synchronizer, Network, keyManager, () => Config.GetCurrentBackendUri(), Config.GetTorSocks5EndPoint());
+				}
+				else
+				{
+					ChaumianClient = new CcjClient(Synchronizer, Network, keyManager, Config.GetFallbackBackendUri(), null);
+				}
+				WalletService = new WalletService(BitcoinStore, keyManager, Synchronizer, ChaumianClient, MemPoolService, Nodes, DataDir, Config.ServiceConfiguration);
+
+				ChaumianClient.Start();
+				Logger.LogInfo("Start Chaumian CoinJoin service...");
+
 				Logger.LogInfo("Starting WalletService...");
-				await WalletService.InitializeAsync(CancelWalletServiceInitialization.Token);
+				await WalletService.InitializeAsync(token);
 				Logger.LogInfo("WalletService started.");
+
+				token.ThrowIfCancellationRequested();
+				WalletService.Coins.CollectionChanged += Coins_CollectionChanged;
 			}
 			CancelWalletServiceInitialization = null; // Must make it null explicitly, because dispose won't make it null.
-			WalletService.Coins.CollectionChanged += Coins_CollectionChanged;
 		}
 
 		public static string GetWalletFullPath(string walletName)
@@ -541,21 +548,42 @@ namespace WalletWasabi.Gui
 			}
 		}
 
+		/// <summary>
+		/// 0: nobody called
+		/// 1: somebody called
+		/// 2: call finished
+		/// </summary>
+		private static long Dispose = 0; // To detect redundant calls
+
 		public static async Task DisposeAsync()
 		{
+			var compareRes = Interlocked.CompareExchange(ref Dispose, 1, 0);
+			if (compareRes == 1)
+			{
+				while (Interlocked.Read(ref Dispose) != 2)
+				{
+					await Task.Delay(50);
+				}
+				return;
+			}
+			else if (compareRes == 2)
+			{
+				return;
+			}
+
 			try
 			{
 				await DisposeInWalletDependentServicesAsync();
 
 				if (UpdateChecker != null)
 				{
-					UpdateChecker?.Dispose();
+					await UpdateChecker?.StopAsync();
 					Logger.LogInfo($"{nameof(UpdateChecker)} is stopped.", nameof(Global));
 				}
 
 				if (Synchronizer != null)
 				{
-					Synchronizer?.Dispose();
+					await Synchronizer?.StopAsync();
 					Logger.LogInfo($"{nameof(Synchronizer)} is stopped.", nameof(Global));
 				}
 
@@ -571,6 +599,11 @@ namespace WalletWasabi.Gui
 
 				if (Nodes != null)
 				{
+					Nodes?.Disconnect();
+					while (Nodes.ConnectedNodes.Any(x => x.IsConnected))
+					{
+						await Task.Delay(50);
+					}
 					Nodes?.Dispose();
 					Logger.LogInfo($"{nameof(Nodes)} are disposed.", nameof(Global));
 				}
@@ -583,13 +616,27 @@ namespace WalletWasabi.Gui
 
 				if (TorManager != null)
 				{
-					TorManager?.Dispose();
+					await TorManager?.StopAsync();
 					Logger.LogInfo($"{nameof(TorManager)} is stopped.", nameof(Global));
+				}
+
+				try
+				{
+					await AsyncMutex.WaitForAllMutexToCloseAsync();
+					Logger.LogInfo($"{nameof(AsyncMutex)}(es) are stopped.", nameof(Global));
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError($"Error during stopping {nameof(AsyncMutex)}: {ex}", nameof(Global));
 				}
 			}
 			catch (Exception ex)
 			{
 				Logger.LogWarning(ex, nameof(Global));
+			}
+			finally
+			{
+				Interlocked.Exchange(ref Dispose, 2);
 			}
 		}
 	}
