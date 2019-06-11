@@ -20,9 +20,8 @@ Run Wasabi with `dotnet run -c Release` from the `WalletWasabi.Gui` folder.
 
 Check the id of the pull requesest.
 ```sh
-git fetch origin/ID/branch:yourbranchname
+git fetch origin pull/ID/head:yourbranchname
 git checkout yourbranchname
-git submodule update --init --recursive
 ```
 
 #### Updating a pull request

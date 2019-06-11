@@ -7,7 +7,7 @@ Note: Many of these Q&A have been copied from real users, see footer for acknowl
 
 ### Who is behind Wasabi?
 
-The Company that is developing Wasabi is zkSNACKs LTD ([twitter](@Zksnacks_LTD) | [website](https://zksnacks.com/))  
+The Company that is developing Wasabi is zkSNACKs LTD ([twitter](https://twitter.com/@Zksnacks_LTD) | [website](https://zksnacks.com/))  
 
 # Install
 
@@ -135,6 +135,10 @@ It is also important that you don't send different coins to the same receiving a
 - The ultimate solution is to 'close the loop' i.e. spend a change coin without merging it with other coins don't generate it in the first place by sending whole coins. 
 
 # Meta
+
+### Where's the coordinator's source code?
+
+https://github.com/zkSNACKs/WalletWasabi/tree/master/WalletWasabi.Backend
 
 ### Does Wasabi have a warrant canary?
 
