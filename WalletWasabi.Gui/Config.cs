@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -145,6 +146,18 @@ namespace WalletWasabi.Gui
 
 		public ServiceConfiguration ServiceConfiguration { get; private set; }
 
+		[JsonProperty(PropertyName = "JsonRpcServerEnabled")]
+		public bool? JsonRpcServerEnabled { get; internal set; }
+
+		[JsonProperty(PropertyName = "JsonRpcUser")]
+		public string JsonRpcUser { get; internal set; }
+
+		[JsonProperty(PropertyName = "JsonRpcPassword")]
+		public string JsonRpcPassword { get; internal set; }
+
+		[JsonProperty(PropertyName = "JsonRpcServerPrefixes")]
+		public string[] JsonRpcServerPrefixes { get; internal set; }
+
 		public Uri GetCurrentBackendUri()
 		{
 			if (TorProcessManager.RequestFallbackAddressUsage)
@@ -284,7 +297,12 @@ namespace WalletWasabi.Gui
 			int? privacyLevelSome,
 			int? privacyLevelFine,
 			int? privacyLevelStrong,
-			Money dustThreshold)
+			Money dustThreshold
+			bool? jsonRpcServerEnabled,
+			string jsonRpcUser,
+			string jsonRpcPassword,
+			string[] jsonRpcServerPrefixes
+			)
 		{
 			Network = Guard.NotNull(nameof(network), network);
 
@@ -312,6 +330,11 @@ namespace WalletWasabi.Gui
 			PrivacyLevelStrong = Guard.NotNull(nameof(privacyLevelStrong), privacyLevelStrong);
 
 			DustThreshold = Guard.NotNull(nameof(dustThreshold), dustThreshold);
+
+			JsonRpcServerEnabled = Guard.NotNull(nameof(jsonRpcServerEnabled), jsonRpcServerEnabled);
+			JsonRpcUser = Guard.NotNullOrEmptyOrWhitespace(nameof(jsonRpcUser), jsonRpcUser);
+			JsonRpcPassword = Guard.NotNullOrEmptyOrWhitespace(nameof(jsonRpcPassword), jsonRpcPassword);
+			JsonRpcServerPrefixes = Guard.NotNull(nameof(jsonRpcServerPrefixes), jsonRpcServerPrefixes);
 
 			ServiceConfiguration = new ServiceConfiguration(MixUntilAnonymitySet.Value, PrivacyLevelSome.Value, PrivacyLevelFine.Value, PrivacyLevelStrong.Value, GetBitcoinCoreEndPoint(), DustThreshold);
 		}
@@ -356,6 +379,14 @@ namespace WalletWasabi.Gui
 			PrivacyLevelFine = 21;
 			PrivacyLevelStrong = 50;
 			DustThreshold = Money.Coins(0.0001m);
+
+			JsonRpcServerEnabled = false;
+			JsonRpcUser = "";
+			JsonRpcPassword = "";
+			JsonRpcServerPrefixes = new [] { 
+				"http://127.0.0.1:18099/",
+				"http://localhost:18099/"
+			};
 
 			if (!File.Exists(FilePath))
 			{
@@ -406,6 +437,11 @@ namespace WalletWasabi.Gui
 			DustThreshold = config.DustThreshold ?? DustThreshold;
 
 			ServiceConfiguration = config.ServiceConfiguration ?? ServiceConfiguration;
+
+			JsonRpcServerEnabled = config.JsonRpcServerEnabled ?? JsonRpcServerEnabled;
+			JsonRpcUser = config.JsonRpcUser ?? JsonRpcUser;
+			JsonRpcPassword = config.JsonRpcPassword ?? JsonRpcPassword;
+			JsonRpcServerPrefixes = config.JsonRpcServerPrefixes ?? JsonRpcServerPrefixes;
 
 			// Just debug convenience.
 			_backendUri = GetCurrentBackendUri();
@@ -502,6 +538,23 @@ namespace WalletWasabi.Gui
 				return true;
 			}
 			if (PrivacyLevelStrong != config.PrivacyLevelStrong)
+			{
+				return true;
+			}
+			if (JsonRpcUser != config.JsonRpcUser)
+			{
+				return true;
+			}
+			if (JsonRpcPassword != config.JsonRpcPassword)
+			{
+				return true;
+			}
+			if (JsonRpcServerPrefixes.Length != config.JsonRpcServerPrefixes.Length)
+			{
+				return true;
+			}
+			var jsonRpcPrefixComaprison = JsonRpcServerPrefixes.Zip(config.JsonRpcServerPrefixes, (x,y)=>x==y);
+			if (jsonRpcPrefixComaprison.Contains(false))
 			{
 				return true;
 			}

@@ -19,6 +19,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Crypto;
 using WalletWasabi.Gui.Dialogs;
+using WalletWasabi.Gui.Models;
+using WalletWasabi.Gui.Rpc;
 using WalletWasabi.Gui.ViewModels;
 using WalletWasabi.Helpers;
 using WalletWasabi.Hwi;
@@ -58,6 +60,8 @@ namespace WalletWasabi.Gui
 		public static UiConfig UiConfig { get; private set; }
 
 		public static Network Network => Config.Network;
+
+		public static JsonRpcServer RpcServer { get; private set; }
 
 		static Global()
 		{
@@ -160,21 +164,7 @@ namespace WalletWasabi.Gui
 			#region ProcessKillSubscription
 
 			AppDomain.CurrentDomain.ProcessExit += async (s, e) => await TryDesperateDequeueAllCoinsAsync();
-			Console.CancelKeyPress += async (s, e) =>
-			{
-				e.Cancel = true;
-				Logger.LogWarning("Process was signaled for killing.", nameof(Global));
-
-				KillRequested = true;
-				await TryDesperateDequeueAllCoinsAsync();
-				Dispatcher.UIThread.PostLogException(() =>
-				{
-					Application.Current?.MainWindow?.Close();
-				});
-				await DisposeAsync();
-
-				Logger.LogInfo($"Wasabi stopped gracefully.", Logger.InstanceGuid.ToString());
-			};
+			Console.CancelKeyPress += async (s, e) => { e.Cancel = true; await StopAndExitAsync(); };
 
 			#endregion ProcessKillSubscription
 
@@ -292,7 +282,33 @@ namespace WalletWasabi.Gui
 
 			#endregion SynchronizerInitialization
 
+			#region JsonRpcServerInitialization
+
+			var jsonRpcServerConfig = new JsonRpcServerConfiguration(Config);
+			if (jsonRpcServerConfig.IsEnabled)
+			{
+				RpcServer = new JsonRpcServer(jsonRpcServerConfig);
+				RpcServer.Start();
+			}
+
+			#endregion JsonRpcServerInitialization
+
 			Initialized = true;
+		}
+
+		internal static async Task StopAndExitAsync()
+		{
+			Logger.LogWarning("Process was signaled for killing.", nameof(Global));
+
+			KillRequested = true;
+			await TryDesperateDequeueAllCoinsAsync();
+			Dispatcher.UIThread.PostLogException(() =>
+			{
+				Application.Current?.MainWindow?.Close();
+			});
+			await DisposeAsync();
+
+			Logger.LogInfo($"Wasabi stopped gracefully.", Logger.InstanceGuid.ToString());
 		}
 
 		private static async Task<AddressManagerBehavior> InitializeAddressManagerBehaviorAsync()
@@ -581,6 +597,12 @@ namespace WalletWasabi.Gui
 			try
 			{
 				await DisposeInWalletDependentServicesAsync();
+
+				if (RpcServer != null)
+				{
+					RpcServer.Stop();
+					Logger.LogInfo($"{nameof(RpcServer)} is stopped.", nameof(Global));
+				}
 
 				if (UpdateChecker != null)
 				{
