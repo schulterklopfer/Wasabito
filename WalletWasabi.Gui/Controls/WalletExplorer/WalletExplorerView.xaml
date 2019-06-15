@@ -1,8 +1,9 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+            xmlns:controls="clr-namespace:WalletWasabi.Gui.Controls.WalletExplorer;assembly=WalletWasabi.Gui"
             xmlns:ViewModels="clr-namespace:WalletWasabi.Gui.Controls.WalletExplorer;assembly=WalletWasabi.Gui">
 
-  <Grid>
-    <TreeView BorderThickness="0" Items="{Binding Wallets}" SelectedItem="{Binding SelectedItem}">
+  <Grid RowDefinitions="*,Auto">
+    <TreeView Grid.Row="0" BorderThickness="0" Items="{Binding Wallets}" SelectedItem="{Binding SelectedItem}">
       <TreeView.Styles>
         <Style Selector="TreeViewItem">
           <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
@@ -187,5 +188,6 @@
         </TreeDataTemplate>
       </TreeView.DataTemplates>
     </TreeView>
+    <controls:CoinJoinStatusView Grid.Row="1">
   </Grid>
 </UserControl>

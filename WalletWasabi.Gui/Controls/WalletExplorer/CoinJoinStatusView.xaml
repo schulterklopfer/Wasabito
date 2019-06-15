@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:WalletWasabi.Gui.Controls;assembly=WalletWasabi.Gui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:WalletWasabi.Gui.Converters;assembly=WalletWasabi.Gui"
+             xmlns:local="clr-namespace:WalletWasabi.Gui.Controls.WalletExplorer;assembly=WalletWasabi.Gui">
+  <UserControl.Resources>
+    <converters:CoinJoinedVisibilityConverter x:Key="CoinJoinedVisibilityConverter" />
+    <converters:MoneyStringConverter x:Key="MoneyStringConverter" />
+    <converters:PhaseStringConverter x:Key="PhaseStringConverter" />
+    <converters:PhaseColorConverter x:Key="PhaseColorConverter" />
+    <converters:PrivacyLevelValueConverter x:Key="PrivacyLevelValueConverter" />
+    <converters:LurkingWifeModeStringConverter x:Key="LurkingWifeModeStringConverter" />
+    <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+  </UserControl.Resources>
+
+  <Grid>
+      <ScrollViewer>
+        <StackPanel Orientation="Vertical">
+          <StackPanel Orientation="Vertical" Spacing="4">
+            <TextBlock Text="Minimum required to be queued for CoinJoin:" />
+            <TextBlock Foreground="YellowGreen" Text="{Binding RequiredBTC, Converter={StaticResource MoneyStringConverter}}" />
+          </StackPanel>
+          <StackPanel Orientation="Vertical" Spacing="4">
+            <TextBlock Text="Coordinator Fee per anonymity set:" />
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="{Binding CoordinatorFeePercent}" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0 12">
+            <Canvas Height="20" Width="200">
+              <Ellipse Width="20" Height="20" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=InputRegistration, Converter={StaticResource PhaseColorConverter}}" Canvas.Left="0" />
+              <Ellipse Width="20" Height="20" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=ConnectionConfirmation, Converter={StaticResource PhaseColorConverter}}" Canvas.Left="50" />
+              <Ellipse Width="20" Height="20" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=OutputRegistration, Converter={StaticResource PhaseColorConverter}}" Canvas.Left="100" />
+              <Ellipse Width="20" Height="20" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=Signing, Converter={StaticResource PhaseColorConverter}}" Canvas.Left="150" />
+              <Line StartPoint="20,10" EndPoint="50,10" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=InputRegistration, Converter={StaticResource PhaseColorConverter}}" />
+              <Line StartPoint="70,10" EndPoint="100,10" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=ConnectionConfirmation, Converter={StaticResource PhaseColorConverter}}" />
+              <Line StartPoint="120,10" EndPoint="150,10" StrokeThickness="4" Stroke="{Binding Phase, ConverterParameter=OutputRegistration, Converter={StaticResource PhaseColorConverter}}" />
+            </Canvas>
+          </StackPanel>
+          <TextBlock VerticalAlignment="Center" Foreground="YellowGreen" Text="{Binding Phase, Converter={StaticResource PhaseStringConverter}}" />
+          <TextBlock Text="Number of Registered Peers:" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Foreground="YellowGreen" Text="{Binding PeersRegistered}" />
+            <TextBlock Text="/" />
+            <TextBlock Text="{Binding PeersNeeded}" />
+            <ProgressBar Minimum="0" Maximum="{Binding PeersNeeded}" Value="{Binding PeersRegistered}" />
+          </StackPanel>
+          <TextBlock Text="Number of Successful Rounds:" />
+          <TextBlock Foreground="YellowGreen" Text="{Binding SuccessfulRoundCount}" />
+        </StackPanel>
+      </ScrollViewer>
+  </Grid>
+</UserControl>

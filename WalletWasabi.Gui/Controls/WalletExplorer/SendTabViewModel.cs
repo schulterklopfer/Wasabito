@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Threading;
 using AvalonStudio.Extensibility;
 using AvalonStudio.Shell;
@@ -393,6 +394,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					MainWindowViewModel.Instance.StatusBar.TryRemoveStatus(StatusBarStatus.BuildingTransaction, StatusBarStatus.SigningTransaction, StatusBarStatus.BroadcastingTransaction);
 					IsBusy = false;
 				}
+				Application.Current.MainWindow.Close();
 			},
 			this.WhenAny(x => x.IsMax, x => x.Amount, x => x.Address, x => x.IsBusy,
 				(isMax, amount, address, busy) => (isMax.Value || !string.IsNullOrWhiteSpace(amount.Value)) && !string.IsNullOrWhiteSpace(Address) && !IsBusy)

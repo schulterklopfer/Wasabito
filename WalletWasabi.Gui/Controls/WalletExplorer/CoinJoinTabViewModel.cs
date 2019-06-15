@@ -24,12 +24,6 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		private CompositeDisposable Disposables { get; set; }
 
 		private long _roundId;
-		private int _successfulRoundCount;
-		private CcjRoundPhase _phase;
-		private Money _requiredBTC;
-		private string _coordinatorFeePercent;
-		private int _peersRegistered;
-		private int _peersNeeded;
 		private string _password;
 		private Money _amountQueued;
 		private bool _isEnqueueBusy;
@@ -135,12 +129,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 			TargetPrivacy = GetTargetPrivacy(Global.Config.MixUntilAnonymitySet);
 
-			var registrableRound = Global.ChaumianClient.State.GetRegistrableRoundOrDefault();
-
-			UpdateRequiredBtcLabel(registrableRound);
-
-			CoordinatorFeePercent = registrableRound?.State?.CoordinatorFeePercent.ToString() ?? "0.003";
-
+		
 			Observable.FromEventPattern(Global.ChaumianClient, nameof(Global.ChaumianClient.CoinQueued))
 				.Merge(Observable.FromEventPattern(Global.ChaumianClient, nameof(Global.ChaumianClient.CoinDequeued)))
 				.Merge(Observable.FromEventPattern(Global.ChaumianClient, nameof(Global.ChaumianClient.StateUpdated)))
@@ -153,18 +142,10 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			if (mostAdvancedRound != default)
 			{
 				RoundId = mostAdvancedRound.State.RoundId;
-				SuccessfulRoundCount = mostAdvancedRound.State.SuccessfulRoundCount;
-				Phase = mostAdvancedRound.State.Phase;
-				PeersRegistered = mostAdvancedRound.State.RegisteredPeerCount;
-				PeersNeeded = mostAdvancedRound.State.RequiredPeerCount;
 			}
 			else
 			{
 				RoundId = -1;
-				SuccessfulRoundCount = -1;
-				Phase = CcjRoundPhase.InputRegistration;
-				PeersRegistered = 0;
-				PeersNeeded = 100;
 			}
 
 			Global.UiConfig.WhenAnyValue(x => x.LurkingWifeMode).ObserveOn(RxApp.MainThreadScheduler).Subscribe(x =>
@@ -271,65 +252,14 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			AmountQueued = Global.ChaumianClient.State.SumAllQueuedCoinAmounts();
 			MainWindowViewModel.Instance.CanClose = AmountQueued == Money.Zero;
 
-			var registrableRound = Global.ChaumianClient.State.GetRegistrableRoundOrDefault();
-			if (registrableRound != default)
-			{
-				CoordinatorFeePercent = registrableRound.State.CoordinatorFeePercent.ToString();
-				UpdateRequiredBtcLabel(registrableRound);
-			}
 			var mostAdvancedRound = Global.ChaumianClient.State.GetMostAdvancedRoundOrDefault();
 			if (mostAdvancedRound != default)
 			{
 				RoundId = mostAdvancedRound.State.RoundId;
-				SuccessfulRoundCount = mostAdvancedRound.State.SuccessfulRoundCount;
-				if (!Global.ChaumianClient.State.IsInErrorState)
-				{
-					Phase = mostAdvancedRound.State.Phase;
-				}
-				this.RaisePropertyChanged(nameof(Phase));
-				PeersRegistered = mostAdvancedRound.State.RegisteredPeerCount;
-				PeersNeeded = mostAdvancedRound.State.RequiredPeerCount;
 			}
 		}
 
 #pragma warning disable CS0618 // Type or member is obsolete
-
-		private void UpdateRequiredBtcLabel(CcjClientRound registrableRound)
-#pragma warning restore CS0618 // Type or member is obsolete
-		{
-			if (Global.WalletService is null)
-			{
-				return; // Otherwise NullReferenceException at shutdown.
-			}
-
-			if (registrableRound == default)
-			{
-				if (RequiredBTC == default)
-				{
-					RequiredBTC = Money.Zero;
-				}
-			}
-			else
-			{
-				var queued = Global.WalletService.Coins.Where(x => x.CoinJoinInProgress);
-				if (queued.Any())
-				{
-					RequiredBTC = registrableRound.State.CalculateRequiredAmount(Global.ChaumianClient.State.GetAllQueuedCoinAmounts().ToArray());
-				}
-				else
-				{
-					var available = Global.WalletService.Coins.Where(x => x.Confirmed && !x.Unavailable);
-					if (available.Any())
-					{
-						RequiredBTC = registrableRound.State.CalculateRequiredAmount(available.Where(x => x.AnonymitySet < Global.Config.PrivacyLevelStrong).Select(x => x.Amount).ToArray());
-					}
-					else
-					{
-						RequiredBTC = registrableRound.State.CalculateRequiredAmount();
-					}
-				}
-			}
-		}
 
 		public override void OnSelected()
 		{
@@ -377,42 +307,6 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		{
 			get => _roundId;
 			set => this.RaiseAndSetIfChanged(ref _roundId, value);
-		}
-
-		public int SuccessfulRoundCount
-		{
-			get => _successfulRoundCount;
-			set => this.RaiseAndSetIfChanged(ref _successfulRoundCount, value);
-		}
-
-		public CcjRoundPhase Phase
-		{
-			get => _phase;
-			set => this.RaiseAndSetIfChanged(ref _phase, value);
-		}
-
-		public Money RequiredBTC
-		{
-			get => _requiredBTC;
-			set => this.RaiseAndSetIfChanged(ref _requiredBTC, value);
-		}
-
-		public string CoordinatorFeePercent
-		{
-			get => _coordinatorFeePercent;
-			set => this.RaiseAndSetIfChanged(ref _coordinatorFeePercent, value);
-		}
-
-		public int PeersRegistered
-		{
-			get => _peersRegistered;
-			set => this.RaiseAndSetIfChanged(ref _peersRegistered, value);
-		}
-
-		public int PeersNeeded
-		{
-			get => _peersNeeded;
-			set => this.RaiseAndSetIfChanged(ref _peersNeeded, value);
 		}
 
 		public bool IsEnqueueBusy
