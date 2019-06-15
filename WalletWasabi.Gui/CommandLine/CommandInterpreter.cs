@@ -1,4 +1,5 @@
 using Mono.Options;
+using NBitcoin;
 using System;
 using System.IO;
 using System.Linq;
@@ -11,49 +12,67 @@ namespace WalletWasabi.Gui.CommandLine
 {
 	public static class CommandInterpreter
 	{
+		private static Command _mixerCommand = new MixerCommand();
+		private static Command _passwordFinderCommand = new PasswordFinderCommand();
+		private static TextWriter _output = Console.Out;
+		private static TextWriter _error = Console.Error;
+
+		// This method is for unit testing porpuse only. 
+		public static void Configure(Command mixerCommand, Command passwordFinderCommand, TextWriter output, TextWriter error)
+		{
+			_mixerCommand = mixerCommand;
+			_passwordFinderCommand = passwordFinderCommand;
+			_output = output;
+			_error = error;
+		}
+
 		/// <returns>If the GUI should run or not.</returns>
 		public static async Task<bool> ExecuteCommandsAsync(string[] args)
 		{
-			var showHelp = false;
 			var showVersion = false;
-
 			Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
 
-			if (args.Length == 0)
-			{
-				return true;
-			}
-
-			OptionSet options = null;
-			var suite = new CommandSet("wassabee") {
-					"Usage: wassabee [OPTIONS]+",
-					"Launches Wasabi Wallet.",
-					"",
-					{ "h|help", "Displays help page and exit.",
-						x => showHelp = x != null},
-					{ "v|version", "Displays Wasabi version and exit.",
-						x => showVersion = x != null},
-					"",
-					"Available commands are:",
-					"",
-					new MixerCommand(),
-					new PasswordFinderCommand()
-				};
+			var suite = new CommandSet("wassabee", _output, _error) {
+				"Usage: wassabee [OPTIONS]+",
+				"Launches Wasabi Wallet.",
+				"",
+				{ "v|version", "Displays Wasabi version and exit.",
+					x => showVersion = x != null},
+				{ "d|datadir=", "Directory path where store all the Wasabi data.",
+					x => {
+						Global.SetDataDir(x); 
+						Logger.InitializeDefaults(Path.Combine(Global.DataDir, "Logs.txt"));
+					}},
+				"",
+				"Available commands are:",
+				"",
+				_mixerCommand,
+				_passwordFinderCommand
+			};
 
 			EnsureBackwardCompatibilityWithOldParameters(ref args);
-			if (await suite.RunAsync(args) == 0)
+			var commandProccessed = await suite.RunAsync(args) == 0;
+
+			if (suite.ShowHelp)
 			{
-				return false;
-			}
-			if (showHelp)
-			{
-				ShowHelp(options);
-				return false;
+				return false; // do not run GUI
 			}
 			else if (showVersion)
 			{
 				ShowVersion();
-				return false;
+				return false; // do not run GUI
+			}
+
+			// if no command was provide we have to lunch the GUI
+			if (!commandProccessed)
+			{
+				var nonProcessedOptions = suite.Options.Parse(args);
+				// If there is some unprocessed argument then something was wrong.
+				if( nonProcessedOptions.Any())
+				{
+					return false;
+				}
+				return true; // run GUI
 			}
 
 			return false;
@@ -71,19 +90,19 @@ namespace WalletWasabi.Gui.CommandLine
 
 		private static void ShowVersion()
 		{
-			Console.WriteLine($"Wasabi Client Version: {Constants.ClientVersion}");
-			Console.WriteLine($"Compatible Coordinator Version: {Constants.BackendMajorVersion}");
+			_output.WriteLine($"Wasabi Client Version: {Constants.ClientVersion}");
+			_output.WriteLine($"Compatible Coordinator Version: {Constants.BackendMajorVersion}");
 		}
 
 		private static void ShowHelp(OptionSet p)
 		{
 			ShowVersion();
-			Console.WriteLine();
-			Console.WriteLine("Usage: wassabee [OPTIONS]+");
-			Console.WriteLine("Launches Wasabi Wallet.");
-			Console.WriteLine();
-			Console.WriteLine("Options:");
-			p.WriteOptionDescriptions(Console.Out);
+			_output.WriteLine();
+			_output.WriteLine("Usage: wassabee [OPTIONS]+");
+			_output.WriteLine("Launches Wasabi Wallet.");
+			_output.WriteLine();
+			_output.WriteLine("Options:");
+			p.WriteOptionDescriptions(_output);
 		}
 	}
 }
