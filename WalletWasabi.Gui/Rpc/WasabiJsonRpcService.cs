@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NBitcoin;
 using WalletWasabi.Models;
+using WalletWasabi.Models.TransactionBuilding;
 using WalletWasabi.Services;
 
 namespace WalletWasabi.Gui.Rpc
@@ -97,12 +98,13 @@ namespace WalletWasabi.Gui.Rpc
 		{
 			AssertWalletIsLoaded();
 			var sync = _global.Synchronizer;
-			var operation = new WalletService.Operation(sendto.ScriptPubKey, amount, label);
+			var payment = new PaymentIntent(sendto.ScriptPubKey, MoneyRequest.Create(amount), label);
+			var feeStrategy = FeeStrategy.CreateFromConfirmationTarget(feeTarget);
 			var password = string.Empty;
 			var result = _global.WalletService.BuildTransaction(
 				password, 
-				new[] { operation }, 
-				feeTarget, 
+				payment, 
+				feeStrategy, 
 				allowUnconfirmed: true, 
 				allowedInputs: coins);
 			var smartTx = result.Transaction;
