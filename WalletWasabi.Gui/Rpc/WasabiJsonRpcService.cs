@@ -28,7 +28,7 @@ namespace WalletWasabi.Gui.Rpc
 					amount = x.Amount.Satoshi, 
 					anonymitySet = x.AnonymitySet,
 					confirmed = x.Confirmed,
-					label = x.Label,
+					label = x.Label.ToString(),
 					keyPath = x.HdPubKey.FullKeyPath.ToString(),
 					address = x.HdPubKey.GetP2wpkhAddress(_global.Network).ToString()
 				}).ToArray();
@@ -60,7 +60,7 @@ namespace WalletWasabi.Gui.Rpc
 				throw new Exception("A non-empty label is required.");
 			}
 			var hdkey = _global.WalletService.KeyManager
-				.GenerateNewKey(label, KeyManagement.KeyState.Clean, isInternal: false);
+				.GenerateNewKey(new SmartLabel(label), KeyManagement.KeyState.Clean, isInternal: false);
 			return new {
 				address = hdkey.GetP2wpkhAddress(_global.Network).ToString(),
 				keyPath = hdkey.FullKeyPath.ToString(),
@@ -93,12 +93,19 @@ namespace WalletWasabi.Gui.Rpc
 				};
 		}
 
+		public class Payment
+		{
+			public BitcoinAddress sendto;
+			public Money amount;
+			public string label;
+		}
+
 		[JsonRpcMethod("send")]
-		public async Task<object> SendTransaction(BitcoinAddress sendto, TxoRef[] coins, long amount, string label, int feeTarget)
+		public async Task<object> SendTransaction(Payment[] payments, TxoRef[] coins, int feeTarget)
 		{
 			AssertWalletIsLoaded();
 			var sync = _global.Synchronizer;
-			var payment = new PaymentIntent(sendto.ScriptPubKey, MoneyRequest.Create(amount), label);
+			var payment = new PaymentIntent( payments.Select(p=> new DestinationRequest(p.sendto.ScriptPubKey, MoneyRequest.Create(p.amount), new SmartLabel(p.label))));
 			var feeStrategy = FeeStrategy.CreateFromConfirmationTarget(feeTarget);
 			var password = string.Empty;
 			var result = _global.WalletService.BuildTransaction(
