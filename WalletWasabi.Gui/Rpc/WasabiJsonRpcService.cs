@@ -101,11 +101,11 @@ namespace WalletWasabi.Gui.Rpc
 		}
 
 		[JsonRpcMethod("send")]
-		public async Task<object> SendTransaction(Payment[] payments, TxoRef[] coins, int feeTarget)
+		public async Task<object> SendTransaction(Payment[] payments, TxoRef[] coins, int feeTarget, bool subtractFee)
 		{
 			AssertWalletIsLoaded();
 			var sync = _global.Synchronizer;
-			var payment = new PaymentIntent( payments.Select(p=> new DestinationRequest(p.sendto.ScriptPubKey, MoneyRequest.Create(p.amount), new SmartLabel(p.label))));
+			var payment = new PaymentIntent( payments.Select(p=> new DestinationRequest(p.sendto.ScriptPubKey, MoneyRequest.Create(p.amount, subtractFee), new SmartLabel(p.label))));
 			var feeStrategy = FeeStrategy.CreateFromConfirmationTarget(feeTarget);
 			var password = string.Empty;
 			var result = _global.WalletService.BuildTransaction(
