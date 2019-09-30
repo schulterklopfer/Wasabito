@@ -101,7 +101,7 @@ namespace WalletWasabi.Gui.Rpc
 		}
 
 		[JsonRpcMethod("send")]
-		public async Task<object> SendTransaction(Payment[] payments, TxoRef[] coins, int feeTarget, bool subtractFee)
+		public async Task<object> SendTransaction(Payment[] payments, TxoRef[] coins, int feeTarget, bool subtractFee = false )
 		{
 			AssertWalletIsLoaded();
 			var sync = _global.Synchronizer;
