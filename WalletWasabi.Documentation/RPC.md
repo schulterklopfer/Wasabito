@@ -258,12 +258,12 @@ The fees for the transaction will be added on top of the sum of values of the ou
 three outputs with 0.4, 0.3 and 0.3 BTC, the amount of BTC in the inputs must be at least 
 0.4+0.3+0.3 + mining fees.
 
-You can add `subtractFee: true` to the request to change this behaviour. Now the mining fee
-will be subtracted from the highest valued output so the input amounts summed up can be exactly
+You can add `subtractFee: true` to one of the request's payments to change this behaviour. Now the mining fee
+will be subtracted from the output in which `subtractFee` was set to `true` so the input amounts summed up can be exactly
 the output amounts summed up.  ( 0.4 - (mining fee) ) + 0.3 + 0.3
 
 ```bash
-curl -s --data-binary '{"jsonrpc":"2.0","id":"1","method":"send", "params": { "payments":[ {"sendto": "tb1qgvnht40a08gumw32kp05hs8mny954hp2snhxcz", "amount": 15000, "label": "To David" }, {"sendto":"tb1qpyhfrpys6skr2mmnc35p3dp7zlv9ew4k0gn7qm", "amount": 86200, "label": "To Michael"} ], "coins":[{"transactionid":"ab83d9d0b2a9873b8ab0dc48b618098f3e7fbd807e27a10f789e9bc330ca89f7", "index":0}], "feeTarget":2, "subtractFee": true }}' http://127.0.0.1:18099/
+curl -s --data-binary '{"jsonrpc":"2.0","id":"1","method":"send", "params": { "payments":[ {"sendto": "tb1qgvnht40a08gumw32kp05hs8mny954hp2snhxcz", "amount": 15000, "label": "To David", "subtractFee": true }, {"sendto":"tb1qpyhfrpys6skr2mmnc35p3dp7zlv9ew4k0gn7qm", "amount": 86200, "label": "To Michael"} ], "coins":[{"transactionid":"ab83d9d0b2a9873b8ab0dc48b618098f3e7fbd807e27a10f789e9bc330ca89f7", "index":0}], "feeTarget":2 }}' http://127.0.0.1:18099/
 ```
 
 In case of error it is reported in the error:
