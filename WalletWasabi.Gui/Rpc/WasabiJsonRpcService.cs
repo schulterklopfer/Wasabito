@@ -106,7 +106,8 @@ namespace WalletWasabi.Gui.Rpc
 		{
 			AssertWalletIsLoaded();
 			var sync = _global.Synchronizer;
-			var payment = new PaymentIntent(payments.Select((p,i)=> new DestinationRequest(p.sendto.ScriptPubKey, MoneyRequest.Create(p.amount, p.subtractFee), new SmartLabel(p.label))));
+			var payment = new PaymentIntent(payments.Select(p => 
+				new DestinationRequest(p.sendto.ScriptPubKey, MoneyRequest.Create(p.amount, p.subtractFee), new SmartLabel(p.label))));
 			var feeStrategy = FeeStrategy.CreateFromConfirmationTarget(feeTarget);
 			var password = string.Empty;
 			var result = _global.WalletService.BuildTransaction(
